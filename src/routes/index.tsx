@@ -4,7 +4,13 @@ import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { Typography, message, Alert } from 'antd'
 import { TrophyOutlined } from '@ant-design/icons'
-import { QuestionInput, AnswerGrid, AnswerGridSkeleton } from '@/components/arena'
+import {
+  QuestionInput,
+  AnswerGrid,
+  AnswerGridSkeleton,
+  LayoutSwitcher,
+  type LayoutMode,
+} from '@/components/arena'
 import { useArenaStore } from '@/stores/arena'
 import { arenaApi } from '@/services/arena'
 
@@ -30,6 +36,7 @@ function ArenaPage() {
   } = useArenaStore()
 
   const [votingAnswerId, setVotingAnswerId] = useState<string | null>(null)
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>('two-col')
 
   // 提交问题
   const handleSubmit = async (q: string) => {
@@ -79,7 +86,7 @@ function ArenaPage() {
   const hasAnswers = answers.length > 0
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-7xl mx-auto">
       {/* 页面标题 */}
       <div className="text-center mb-8">
         <Title level={2} className="flex items-center justify-center gap-3 !mb-2">
@@ -101,15 +108,20 @@ function ArenaPage() {
         />
       </div>
 
-      {/* 当前问题展示 */}
+      {/* 当前问题展示 + 布局切换 */}
       {question && hasAnswers && (
-        <Alert
-          message="当前问题"
-          description={question}
-          type="info"
-          showIcon
-          className="mb-6"
-        />
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+          <Alert
+            message="当前问题"
+            description={question}
+            type="info"
+            showIcon
+            className="flex-1 w-full sm:w-auto"
+          />
+          <div className="flex-shrink-0">
+            <LayoutSwitcher value={layoutMode} onChange={setLayoutMode} />
+          </div>
+        </div>
       )}
 
       {/* 加载状态 */}
@@ -122,6 +134,7 @@ function ArenaPage() {
           votedAnswerId={votedAnswerId}
           votingAnswerId={votingAnswerId}
           onVote={handleVote}
+          layoutMode={layoutMode}
         />
       )}
 

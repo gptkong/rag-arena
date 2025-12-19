@@ -3,3 +3,4 @@
 export { QuestionInput } from './QuestionInput'
 export { AnswerCard } from './AnswerCard'
 export { AnswerGrid, AnswerGridSkeleton } from './AnswerGrid'
+export { LayoutSwitcher, type LayoutMode } from './LayoutSwitcher'
