@@ -1,6 +1,26 @@
 // Arena - RAG 问答竞技场类型定义
 
 /**
+ * 单个引用摘要
+ */
+export interface Citation {
+  /** 引用唯一标识 */
+  id: string
+  /** 文档标题 */
+  title: string
+  /** 摘要内容 */
+  content: string
+  /** 文档来源/URL (可选) */
+  source?: string
+  /** 相关性分数 (0-1，可选) */
+  relevanceScore?: number
+  /** 页码或章节 (可选) */
+  location?: string
+  /** 文档类型标签 (可选，如 PDF、网页、数据库等) */
+  docType?: 'pdf' | 'webpage' | 'database' | 'api' | 'file' | 'other'
+}
+
+/**
  * 单个回答
  */
 export interface Answer {
@@ -10,6 +30,8 @@ export interface Answer {
   content: string
   /** 供应商标识 (匿名，如 A/B/C/D) */
   providerId: string
+  /** 引用摘要列表 (可选) */
+  citations?: Citation[]
 }
 
 /**
