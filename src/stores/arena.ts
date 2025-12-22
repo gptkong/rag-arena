@@ -19,8 +19,11 @@ interface ArenaState {
 
   // Actions
   setQuestion: (question: string) => void
-  setQuestionId: (questionId: string) => void
+  setQuestionId: (questionId: string | null) => void
   setAnswers: (answers: Answer[]) => void
+  appendAnswerDelta: (answerId: string, delta: string) => void
+  finalizeAnswer: (answerId: string, patch: Partial<Answer>) => void
+  setAnswerError: (answerId: string, message: string) => void
   setLoading: (loading: boolean) => void
   setVotedAnswerId: (answerId: string | null) => void
   setVoting: (voting: boolean) => void
@@ -42,6 +45,26 @@ export const useArenaStore = create<ArenaState>()((set) => ({
   setQuestion: (question) => set({ question }),
   setQuestionId: (questionId) => set({ questionId }),
   setAnswers: (answers) => set({ answers }),
+  appendAnswerDelta: (answerId, delta) =>
+    set((state) => ({
+      answers: state.answers.map((answer) =>
+        answer.id === answerId
+          ? { ...answer, content: `${answer.content}${delta}` }
+          : answer,
+      ),
+    })),
+  finalizeAnswer: (answerId, patch) =>
+    set((state) => ({
+      answers: state.answers.map((answer) =>
+        answer.id === answerId ? { ...answer, ...patch } : answer,
+      ),
+    })),
+  setAnswerError: (answerId, message) =>
+    set((state) => ({
+      answers: state.answers.map((answer) =>
+        answer.id === answerId ? { ...answer, error: message } : answer,
+      ),
+    })),
   setLoading: (isLoading) => set({ isLoading }),
   setVotedAnswerId: (votedAnswerId) => set({ votedAnswerId }),
   setVoting: (isVoting) => set({ isVoting }),

@@ -32,6 +32,8 @@ export interface Answer {
   providerId: string
   /** 引用摘要列表 (可选) */
   citations?: Citation[]
+  /** 错误信息 (可选) */
+  error?: string
 }
 
 /**

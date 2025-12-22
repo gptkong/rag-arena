@@ -31,6 +31,9 @@ function ArenaPage() {
     setQuestion,
     setQuestionId,
     setAnswers,
+    appendAnswerDelta,
+    finalizeAnswer,
+    setAnswerError,
     setLoading,
     setVotedAnswerId,
     reset,
@@ -45,9 +48,57 @@ function ArenaPage() {
     setLoading(true)
 
     try {
-      const response = await arenaApi.submitQuestion(q, dateRange)
-      setQuestionId(response.questionId)
-      setAnswers(response.answers)
+      setQuestionId(null)
+      setAnswers([])
+
+      const deltaBuffer = new Map<string, string>()
+      let flushScheduled = false
+      const flush = () => {
+        flushScheduled = false
+        for (const [answerId, delta] of deltaBuffer) {
+          if (delta) appendAnswerDelta(answerId, delta)
+        }
+        deltaBuffer.clear()
+      }
+      const scheduleFlush = () => {
+        if (flushScheduled) return
+        flushScheduled = true
+        requestAnimationFrame(flush)
+      }
+
+      await arenaApi.submitQuestionStream(q, dateRange, {
+        onMeta: (meta) => {
+          setQuestionId(meta.questionId)
+          setAnswers(
+            meta.answers.map((a) => ({
+              id: a.answerId,
+              providerId: a.providerId,
+              content: '',
+            })),
+          )
+        },
+        onDelta: (e) => {
+          deltaBuffer.set(e.answerId, `${deltaBuffer.get(e.answerId) || ''}${e.delta}`)
+          scheduleFlush()
+        },
+        onAnswerDone: (e) => {
+          flush()
+          finalizeAnswer(e.answerId, {
+            content: e.content,
+            citations: e.citations,
+          })
+        },
+        onAnswerError: (e) => {
+          flush()
+          setAnswerError(e.answerId, e.message)
+        },
+        onDone: (e) => {
+          flush()
+          if (!e.ok) {
+            throw new Error(e.message || '获取回答失败，请重试')
+          }
+        },
+      })
     } catch (error) {
       message.error(error instanceof Error ? error.message : '获取回答失败，请重试')
       reset()
@@ -58,6 +109,7 @@ function ArenaPage() {
 
   // 点赞
   const handleVote = async (answerId: string) => {
+    if (isLoading) return
     if (!questionId) return
 
     // 如果点击已点赞的回答，取消点赞
@@ -144,16 +196,17 @@ function ArenaPage() {
           )}
 
           {/* 加载状态 */}
-          <AnswerGridSkeleton visible={isLoading} />
+          <AnswerGridSkeleton visible={isLoading && !hasAnswers} />
 
           {/* 回答网格 */}
-          {!isLoading && (
+          {hasAnswers && (
             <AnswerGrid
               answers={answers}
               votedAnswerId={votedAnswerId}
               votingAnswerId={votingAnswerId}
               onVote={handleVote}
               layoutMode={layoutMode}
+              disableVoting={isLoading}
             />
           )}
 

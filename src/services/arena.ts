@@ -3,9 +3,10 @@
 import { get, post } from '@/lib/request'
 import type { ArenaResponse, VoteRequest, VoteResponse, StatsResponse } from '@/types/arena'
 import type { DateRange } from '@/components/arena'
+import { readSseStream } from '@/lib/sse'
 
 // 模拟模式开关 - 设为 true 使用模拟数据，false 调用真实 API
-const USE_MOCK = true
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
 
 // 模拟延迟 (ms)
 const MOCK_DELAY = 1500
@@ -263,6 +264,130 @@ export async function submitQuestion(question: string, dateRange?: DateRange): P
   return post<ArenaResponse>('/arena/ask', payload)
 }
 
+type ArenaSseMetaEvent = {
+  protocolVersion: number
+  requestId: string
+  questionId: string
+  question: string
+  answers: { answerId: string; providerId: string }[]
+}
+
+type ArenaSseAnswerDeltaEvent = {
+  answerId: string
+  seq: number
+  delta: string
+}
+
+type ArenaSseAnswerDoneEvent = {
+  answerId: string
+  content: string
+  citations?: Citation[]
+  model?: string
+  latencyMs?: number
+}
+
+type ArenaSseAnswerErrorEvent = {
+  answerId: string
+  message: string
+}
+
+type ArenaSseDoneEvent = {
+  questionId?: string
+  ok: boolean
+  durationMs: number
+  message?: string
+}
+
+type SubmitQuestionStreamHandlers = {
+  onMeta: (e: ArenaSseMetaEvent) => void
+  onDelta: (e: ArenaSseAnswerDeltaEvent) => void
+  onAnswerDone: (e: ArenaSseAnswerDoneEvent) => void
+  onAnswerError: (e: ArenaSseAnswerErrorEvent) => void
+  onDone: (e: ArenaSseDoneEvent) => void
+}
+
+/**
+ * 提交流式问题（SSE），通过同一路径 `POST /api/arena/ask` 切换:
+ * - `Accept: text/event-stream` 或 `?stream=1`
+ */
+export async function submitQuestionStream(
+  question: string,
+  dateRange: DateRange | undefined,
+  handlers: SubmitQuestionStreamHandlers,
+): Promise<void> {
+  if (USE_MOCK) {
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    const mock = generateMockAnswers(question)
+    handlers.onMeta({
+      protocolVersion: 1,
+      requestId: `mock_${Date.now()}`,
+      questionId: mock.questionId,
+      question: mock.question,
+      answers: mock.answers.map((a) => ({ answerId: a.id, providerId: a.providerId })),
+    })
+
+    for (const answer of mock.answers) {
+      const deltas = answer.content.match(/.{1,64}/gs) ?? []
+      let seq = 1
+      for (const delta of deltas) {
+        handlers.onDelta({ answerId: answer.id, seq, delta })
+        seq += 1
+      }
+      handlers.onAnswerDone({
+        answerId: answer.id,
+        content: answer.content,
+        citations: answer.citations,
+      })
+    }
+
+    handlers.onDone({ questionId: mock.questionId, ok: true, durationMs: 0 })
+    return
+  }
+
+  const payload: Record<string, unknown> = { question }
+  if (dateRange && dateRange[0] && dateRange[1]) {
+    payload.startDate = dateRange[0].toISOString()
+    payload.endDate = dateRange[1].toISOString()
+  }
+
+  const baseURL = import.meta.env.VITE_API_BASE_URL || '/api'
+  const url = `${baseURL}/arena/ask?stream=1`
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Accept: 'text/event-stream',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+
+  await readSseStream(response, (msg) => {
+    if (!msg.data) return
+    const data = JSON.parse(msg.data) as any
+
+    switch (msg.event) {
+      case 'meta':
+        handlers.onMeta(data as ArenaSseMetaEvent)
+        break
+      case 'answer.delta':
+        handlers.onDelta(data as ArenaSseAnswerDeltaEvent)
+        break
+      case 'answer.done':
+        handlers.onAnswerDone(data as ArenaSseAnswerDoneEvent)
+        break
+      case 'answer.error':
+        handlers.onAnswerError(data as ArenaSseAnswerErrorEvent)
+        break
+      case 'done':
+        handlers.onDone(data as ArenaSseDoneEvent)
+        break
+      default:
+        break
+    }
+  })
+}
+
 /**
  * 提交点赞
  * @param request 点赞请求
@@ -298,6 +423,7 @@ export async function getStats(): Promise<StatsResponse> {
 
 export const arenaApi = {
   submitQuestion,
+  submitQuestionStream,
   submitVote,
   getStats,
 }

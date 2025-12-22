@@ -16,6 +16,8 @@ interface AnswerGridProps {
   onVote: (answerId: string) => void
   /** 布局模式 */
   layoutMode?: LayoutMode
+  /** 禁用投票（如流式生成中） */
+  disableVoting?: boolean
 }
 
 // 供应商标识颜色映射
@@ -46,6 +48,7 @@ export function AnswerGrid({
   votingAnswerId,
   onVote,
   layoutMode = 'two-col',
+  disableVoting = false,
 }: AnswerGridProps) {
   if (answers.length === 0) {
     return null
@@ -71,13 +74,15 @@ export function AnswerGrid({
               </span>
             ),
             children: (
-              <AnswerCard
-                answer={answer}
-                isVoted={votedAnswerId === answer.id}
-                disabled={votedAnswerId !== null && votedAnswerId !== answer.id}
-                loading={votingAnswerId === answer.id}
-                onVote={() => onVote(answer.id)}
-              />
+                <AnswerCard
+                  answer={answer}
+                  isVoted={votedAnswerId === answer.id}
+                  disabled={
+                    disableVoting || (votedAnswerId !== null && votedAnswerId !== answer.id)
+                  }
+                  loading={votingAnswerId === answer.id}
+                  onVote={() => onVote(answer.id)}
+                />
             ),
           }))}
         />
@@ -96,7 +101,9 @@ export function AnswerGrid({
             <AnswerCard
               answer={answer}
               isVoted={votedAnswerId === answer.id}
-              disabled={votedAnswerId !== null && votedAnswerId !== answer.id}
+              disabled={
+                disableVoting || (votedAnswerId !== null && votedAnswerId !== answer.id)
+              }
               loading={votingAnswerId === answer.id}
               onVote={() => onVote(answer.id)}
             />

@@ -1,7 +1,7 @@
 // AnswerCard - 单个回答卡片组件
 
 import { useState } from 'react'
-import { Card, Button, Tag } from 'antd'
+import { Card, Button, Tag, Alert } from 'antd'
 import { LikeOutlined, LikeFilled, FileTextOutlined, DownOutlined } from '@ant-design/icons'
 import { XMarkdown } from '@ant-design/x-markdown'
 import '@ant-design/x-markdown/themes/light.css'
@@ -39,6 +39,7 @@ export function AnswerCard({
   const color = providerColors[answer.providerId] || 'default'
   const [citationsExpanded, setCitationsExpanded] = useState(true)
   const hasCitations = answer.citations && answer.citations.length > 0
+  const hasError = Boolean(answer.error)
 
   return (
     <Card
@@ -76,6 +77,15 @@ export function AnswerCard({
     >
       {/* 回答内容区域 */}
       <div className="flex-1 overflow-auto max-h-80">
+        {hasError && (
+          <Alert
+            type="error"
+            showIcon
+            message="生成失败"
+            description={answer.error}
+            className="mb-3"
+          />
+        )}
         <XMarkdown className="x-markdown-light" content={answer.content} />
       </div>
 
