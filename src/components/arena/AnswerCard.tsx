@@ -1,6 +1,6 @@
 // AnswerCard - 单个回答卡片组件
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Card, Button, Tag, Alert } from 'antd'
 import { LikeOutlined, LikeFilled, FileTextOutlined, DownOutlined } from '@ant-design/icons'
 import { XMarkdown } from '@ant-design/x-markdown'
@@ -41,6 +41,16 @@ export function AnswerCard({
   const hasCitations = answer.citations && answer.citations.length > 0
   const hasError = Boolean(answer.error)
 
+  // 内容区域 ref，用于自动滚动
+  const contentRef = useRef<HTMLDivElement>(null)
+
+  // 流式渲染时自动滚动到底部
+  useEffect(() => {
+    if (contentRef.current && answer.content) {
+      contentRef.current.scrollTop = contentRef.current.scrollHeight
+    }
+  }, [answer.content])
+
   return (
     <Card
       className={`h-full flex flex-col transition-all ${
@@ -76,7 +86,7 @@ export function AnswerCard({
       }
     >
       {/* 回答内容区域 */}
-      <div className="flex-1 overflow-auto max-h-80">
+      <div ref={contentRef} className="flex-1 overflow-auto max-h-80">
         {hasError && (
           <Alert
             type="error"
