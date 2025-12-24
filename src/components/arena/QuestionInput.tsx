@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Sender } from '@ant-design/x'
 import { Button, DatePicker } from 'antd'
-import { ReloadOutlined, CalendarOutlined } from '@ant-design/icons'
+import { PlusOutlined, CalendarOutlined } from '@ant-design/icons'
 import type { Dayjs } from 'dayjs'
 import dayjs from 'dayjs'
 
@@ -61,11 +61,12 @@ export function QuestionInput({
       <div className="w-full max-w-3xl mx-auto text-center">
         <Button
           type="primary"
-          icon={<ReloadOutlined />}
+          icon={<PlusOutlined />}
           onClick={handleReset}
           size="large"
+          disabled={loading}
         >
-          重新提问
+          新建会话
         </Button>
       </div>
     )

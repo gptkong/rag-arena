@@ -364,7 +364,7 @@ export async function submitQuestionStream(
 
   await readSseStream(response, (msg) => {
     if (!msg.data) return
-    const data = JSON.parse(msg.data) as any
+    const data: unknown = JSON.parse(msg.data)
 
     switch (msg.event) {
       case 'meta':

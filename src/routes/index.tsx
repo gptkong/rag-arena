@@ -1,14 +1,15 @@
 // Arena Page - RAG 问答竞技场首页
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { Typography, message, Alert } from 'antd'
-import { TrophyOutlined, ThunderboltOutlined } from '@ant-design/icons'
+import { Typography, message, Alert, Drawer, Button } from 'antd'
+import { TrophyOutlined, ThunderboltOutlined, HistoryOutlined } from '@ant-design/icons'
 import {
   QuestionInput,
   AnswerGrid,
   AnswerGridSkeleton,
   LayoutSwitcher,
+  SessionSidebar,
   type LayoutMode,
   type DateRange,
 } from '@/components/arena'
@@ -23,32 +24,43 @@ export const Route = createFileRoute('/')({
 
 function ArenaPage() {
   const {
-    question,
-    questionId,
-    answers,
     isLoading,
-    votedAnswerId,
-    setQuestion,
-    setQuestionId,
     setAnswers,
     appendAnswerDelta,
     finalizeAnswer,
     setAnswerError,
     setLoading,
     setVotedAnswerId,
-    reset,
+    startNewSession,
+    startSessionWithQuestion,
+    setServerQuestionId,
   } = useArenaStore()
 
   const [votingAnswerId, setVotingAnswerId] = useState<string | null>(null)
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('two-col')
+  const [historyOpen, setHistoryOpen] = useState(false)
+
+  const { activeSessionId, activeSession } = useArenaStore((s) => ({
+    activeSessionId: s.activeSessionId,
+    activeSession: s.sessions.find((ss) => ss.id === s.activeSessionId) || null,
+  }))
+
+  const question = activeSession?.question || ''
+  const questionId = activeSession?.serverQuestionId || null
+  const answers = activeSession?.answers || []
+  const votedAnswerId = activeSession?.votedAnswerId || null
+
+  useEffect(() => {
+    setVotingAnswerId(null)
+  }, [activeSessionId])
 
   // 提交问题
   const handleSubmit = async (q: string, dateRange?: DateRange) => {
-    setQuestion(q)
+    startSessionWithQuestion(q)
     setLoading(true)
 
     try {
-      setQuestionId(null)
+      setServerQuestionId(null)
       setAnswers([])
 
       const deltaBuffer = new Map<string, string>()
@@ -68,7 +80,7 @@ function ArenaPage() {
 
       await arenaApi.submitQuestionStream(q, dateRange, {
         onMeta: (meta) => {
-          setQuestionId(meta.questionId)
+          setServerQuestionId(meta.questionId)
           setAnswers(
             meta.answers.map((a) => ({
               id: a.answerId,
@@ -101,7 +113,8 @@ function ArenaPage() {
       })
     } catch (error) {
       message.error(error instanceof Error ? error.message : '获取回答失败，请重试')
-      reset()
+      setServerQuestionId(null)
+      setAnswers([])
     } finally {
       setLoading(false)
     }
@@ -133,93 +146,122 @@ function ArenaPage() {
 
   // 重新提问
   const handleReset = () => {
-    reset()
+    if (isLoading) return
+    startNewSession()
   }
 
   const hasAnswers = answers.length > 0
   const isActive = hasAnswers || isLoading
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-4rem)]">
-      {/* 标题和输入区域 */}
-      <div
-        className={`w-full max-w-4xl mx-auto ${
-          isActive ? 'pt-0' : 'flex-1 flex flex-col justify-center'
-        }`}
-      >
-        {/* 页面标题 */}
-        <div className="text-center mb-8">
-          <Title
-            level={isActive ? 3 : 1}
-            className="flex items-center justify-center gap-3 !mb-3"
-          >
-            <TrophyOutlined className="text-yellow-500" />
-            RAG 问答竞技场
-          </Title>
+    <div className="mx-auto w-full max-w-7xl flex gap-6 min-h-[calc(100vh-4rem)]">
+      {/* 桌面端侧边栏 */}
+      <aside className="hidden lg:block w-72 flex-shrink-0">
+        <div className="sticky top-8 h-[calc(100vh-6rem)]">
+          <SessionSidebar className="h-full" disabled={isLoading} />
+        </div>
+      </aside>
 
-          {!isActive && (
-            <Text type="secondary" className="text-base">
-              <ThunderboltOutlined className="mr-2 text-amber-500" />
-              提出问题，对比 4 个 AI 模型的回答，为最佳答案点赞
-            </Text>
-          )}
+      {/* 主内容 */}
+      <div className="flex-1 min-w-0 flex flex-col">
+        {/* 标题和输入区域 */}
+        <div className={`${isActive ? 'pt-0' : 'flex-1 flex flex-col justify-center'}`}>
+          <div className="w-full max-w-4xl mx-auto">
+            {/* 页面标题 */}
+            <div className="text-center mb-8 relative">
+              <Button
+                className="lg:hidden absolute left-0 top-0"
+                icon={<HistoryOutlined />}
+                onClick={() => setHistoryOpen(true)}
+                disabled={isLoading}
+              >
+                历史
+              </Button>
+
+              <Title
+                level={isActive ? 3 : 1}
+                className="flex items-center justify-center gap-3 !mb-3"
+              >
+                <TrophyOutlined className="text-yellow-500" />
+                RAG 问答竞技场
+              </Title>
+
+              {!isActive && (
+                <Text type="secondary" className="text-base">
+                  <ThunderboltOutlined className="mr-2 text-amber-500" />
+                  提出问题，对比 4 个 AI 模型的回答，为最佳答案点赞
+                </Text>
+              )}
+            </div>
+
+            {/* 问题输入区域 */}
+            <div className="mb-8">
+              <QuestionInput
+                key={activeSessionId}
+                loading={isLoading}
+                disabled={hasAnswers}
+                onSubmit={handleSubmit}
+                onReset={handleReset}
+              />
+            </div>
+          </div>
         </div>
 
-        {/* 问题输入区域 */}
-        <div className="mb-8">
-          <QuestionInput
-            loading={isLoading}
-            disabled={hasAnswers}
-            onSubmit={handleSubmit}
-            onReset={handleReset}
-          />
-        </div>
+        {/* 回答区域 */}
+        {isActive && (
+          <div className="flex-1 w-full">
+            {/* 当前问题展示 + 布局切换 */}
+            {question && hasAnswers && (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                <Alert
+                  message="当前问题"
+                  description={question}
+                  type="info"
+                  showIcon
+                  className="flex-1 w-full sm:w-auto"
+                />
+                <div className="flex-shrink-0">
+                  <LayoutSwitcher value={layoutMode} onChange={setLayoutMode} />
+                </div>
+              </div>
+            )}
+
+            {/* 加载状态 */}
+            <AnswerGridSkeleton visible={isLoading && !hasAnswers} />
+
+            {/* 回答网格 */}
+            {hasAnswers && (
+              <AnswerGrid
+                answers={answers}
+                votedAnswerId={votedAnswerId}
+                votingAnswerId={votingAnswerId}
+                onVote={handleVote}
+                layoutMode={layoutMode}
+                disableVoting={isLoading}
+              />
+            )}
+
+            {/* 投票提示 */}
+            {hasAnswers && !votedAnswerId && !isLoading && (
+              <div className="text-center mt-6">
+                <Text type="secondary">请为您认为最好的回答点赞</Text>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* 回答区域 */}
-      {isActive && (
-        <div className="flex-1 w-full max-w-7xl mx-auto">
-          {/* 当前问题展示 + 布局切换 */}
-          {question && hasAnswers && (
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-              <Alert
-                message="当前问题"
-                description={question}
-                type="info"
-                showIcon
-                className="flex-1 w-full sm:w-auto"
-              />
-              <div className="flex-shrink-0">
-                <LayoutSwitcher value={layoutMode} onChange={setLayoutMode} />
-              </div>
-            </div>
-          )}
-
-          {/* 加载状态 */}
-          <AnswerGridSkeleton visible={isLoading && !hasAnswers} />
-
-          {/* 回答网格 */}
-          {hasAnswers && (
-            <AnswerGrid
-              answers={answers}
-              votedAnswerId={votedAnswerId}
-              votingAnswerId={votingAnswerId}
-              onVote={handleVote}
-              layoutMode={layoutMode}
-              disableVoting={isLoading}
-            />
-          )}
-
-          {/* 投票提示 */}
-          {hasAnswers && !votedAnswerId && !isLoading && (
-            <div className="text-center mt-6">
-              <Text type="secondary">
-                请为您认为最好的回答点赞 👆
-              </Text>
-            </div>
-          )}
-        </div>
-      )}
+      {/* 移动端抽屉侧边栏 */}
+      <Drawer
+        title="历史会话"
+        placement="left"
+        width={320}
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        className="lg:hidden"
+      >
+        <SessionSidebar disabled={isLoading} onAfterSelect={() => setHistoryOpen(false)} />
+      </Drawer>
     </div>
   )
 }
