@@ -1,10 +1,8 @@
 // AnswerCard - 单个回答卡片组件
 
 import { useState, useRef, useEffect } from 'react'
-import { Card, Button, Tag, Alert, Tooltip } from 'antd'
+import { Card, Tag, Alert, Tooltip } from 'antd'
 import {
-  LikeOutlined,
-  LikeFilled,
   FileTextOutlined,
   DownOutlined,
   CheckCircleFilled,
@@ -13,6 +11,7 @@ import { XMarkdown } from '@ant-design/x-markdown'
 import '@ant-design/x-markdown/themes/light.css'
 import type { Answer } from '@/types/arena'
 import { CitationCard } from './CitationCard'
+import { HoldToConfirmButton } from './HoldToConfirmButton'
 
 interface AnswerCardProps {
   /** 回答数据 */
@@ -150,24 +149,15 @@ export function AnswerCard({
         </div>
       }
       extra={
-        <Tooltip title={isVoted ? '取消投票' : disabled ? '已投票给其他回答' : '投票'}>
-          <div
-            onMouseEnter={() => onVoteHover?.(true)}
-            onMouseLeave={() => onVoteHover?.(false)}
-          >
-            <Button
-              type={isVoted ? 'primary' : 'default'}
-              icon={isVoted ? <LikeFilled /> : <LikeOutlined />}
-              onClick={onVote}
-              disabled={disabled && !isVoted}
+        <Tooltip title={isVoted ? '点击取消投票' : disabled ? '已投票给其他回答' : '长按投票'}>
+          <div>
+            <HoldToConfirmButton
+              isConfirmed={isVoted}
+              disabled={disabled}
               loading={loading}
-              className={`
-                !rounded-xl transition-all duration-300
-                ${isVoted ? '!shadow-lg !shadow-teal-500/25' : ''}
-              `}
-            >
-              {isVoted ? '已投票' : '投票'}
-            </Button>
+              onConfirm={onVote}
+              onHover={onVoteHover}
+            />
           </div>
         </Tooltip>
       }
