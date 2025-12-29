@@ -91,7 +91,7 @@ export function AnswerCard({
   return (
     <Card
       className={`
-        h-full flex flex-col transition-all duration-300 !rounded-2xl overflow-hidden
+        flex flex-col transition-all duration-300 !rounded-2xl overflow-hidden
         ${isVoted ? 'ring-2 ring-teal-500 shadow-xl shadow-teal-500/20 animate-vote-glow' : 'hover:shadow-lg'}
         ${!hasContent && !hasError ? 'animate-pulse-soft' : ''}
       `}
@@ -161,7 +161,7 @@ export function AnswerCard({
       }
     >
       {/* 回答内容区域 */}
-      <div ref={contentRef} className="flex-1 overflow-auto max-h-80 pr-1">
+      <div ref={contentRef} className="flex-1 pr-1">
         {hasError && (
           <Alert
             type="error"
@@ -235,10 +235,10 @@ export function AnswerCard({
           <div
             className={`
               overflow-hidden transition-all duration-300 ease-out
-              ${citationsExpanded ? 'max-h-[600px] opacity-100 mt-4' : 'max-h-0 opacity-0 mt-0'}
+              ${citationsExpanded ? 'opacity-100 mt-4' : 'max-h-0 opacity-0 mt-0'}
             `}
           >
-            <div className="space-y-3 max-h-80 overflow-auto pr-1">
+            <div className="space-y-3 pr-1">
               {answer.citations!.map((citation, index) => (
                 <CitationCard key={citation.id} citation={citation} index={index} />
               ))}
