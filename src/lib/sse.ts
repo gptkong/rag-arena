@@ -1,3 +1,10 @@
+/**
+ * SSE (Server-Sent Events) 流式读取工具
+ * 
+ * 当前为 Mock 模式，此模块暂未使用
+ * 后续对接真实 SSE 接口时启用
+ */
+
 export type SseEventMessage = {
   event: string
   data: string
@@ -25,6 +32,21 @@ function parseSseBlock(block: string): SseEventMessage | null {
   return { event, data }
 }
 
+/**
+ * 读取 SSE 流式响应
+ * @param response fetch 响应对象
+ * @param onMessage 消息回调函数
+ * 
+ * @example
+ * ```ts
+ * const response = await fetch('/api/stream', {
+ *   headers: { Accept: 'text/event-stream' }
+ * })
+ * await readSseStream(response, (msg) => {
+ *   console.log(msg.event, msg.data)
+ * })
+ * ```
+ */
 export async function readSseStream(
   response: Response,
   onMessage: (msg: SseEventMessage) => void,
@@ -61,4 +83,3 @@ export async function readSseStream(
     }
   }
 }
-

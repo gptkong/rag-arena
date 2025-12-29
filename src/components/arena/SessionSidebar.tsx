@@ -66,7 +66,7 @@ export function SessionSidebar({
       size="small"
       title="历史会话"
       className={clsx('h-full', className)}
-      bodyStyle={{ padding: 8, height: '100%', display: 'flex', flexDirection: 'column' }}
+      styles={{ body: { padding: 8, height: '100%', display: 'flex', flexDirection: 'column' } }}
       style={style}
     >
       <div className="flex-1 overflow-auto">

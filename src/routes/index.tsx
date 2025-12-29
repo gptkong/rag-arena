@@ -51,10 +51,10 @@ function ArenaPage() {
   const [sourcesTab, setSourcesTab] = useState<string>('all')
   const [draftQuestion, setDraftQuestion] = useState('')
 
-  const { activeSessionId, activeSession } = useArenaStore((s) => ({
-    activeSessionId: s.activeSessionId,
-    activeSession: s.sessions.find((ss) => ss.id === s.activeSessionId) || null,
-  }))
+  const activeSessionId = useArenaStore((s) => s.activeSessionId)
+  const activeSession = useArenaStore(
+    (s) => s.sessions.find((ss) => ss.id === s.activeSessionId) || null,
+  )
 
   const question = activeSession?.question || ''
   const questionId = activeSession?.serverQuestionId || null
@@ -304,7 +304,7 @@ function ArenaPage() {
       <Drawer
         title="侧边栏"
         placement="left"
-        width={320}
+        styles={{ content: { width: 320 } }}
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}
         className="lg:hidden"
@@ -323,7 +323,7 @@ function ArenaPage() {
       <Drawer
         title="引用来源面板"
         placement="right"
-        width={480}
+        styles={{ content: { width: 480 } }}
         open={sourcesOpen}
         onClose={() => setSourcesOpen(false)}
       >

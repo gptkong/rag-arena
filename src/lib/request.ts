@@ -1,3 +1,21 @@
+/**
+ * HTTP 请求工具
+ * 
+ * 当前为 Mock 模式，此模块暂未使用
+ * 后续对接真实接口时启用
+ * 
+ * @example
+ * ```ts
+ * import { get, post } from '@/lib/request'
+ * 
+ * // GET 请求
+ * const data = await get<UserData>('/api/user/1')
+ * 
+ * // POST 请求
+ * const result = await post<Response>('/api/user', { name: 'test' })
+ * ```
+ */
+
 import axios, { type AxiosRequestConfig } from 'axios'
 
 const request = axios.create({

@@ -65,7 +65,7 @@ export function PromptLibrary({
       size="small"
       title="Prompt 库"
       className={clsx('h-full', className)}
-      bodyStyle={{ padding: 8, height: '100%', display: 'flex', flexDirection: 'column' }}
+      styles={{ body: { padding: 8, height: '100%', display: 'flex', flexDirection: 'column' } }}
     >
       <div className="flex-1 overflow-auto">
         <Prompts
