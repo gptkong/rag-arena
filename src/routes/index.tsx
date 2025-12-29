@@ -8,7 +8,6 @@ import {
   ThunderboltOutlined,
   HistoryOutlined,
   FileTextOutlined,
-  RobotOutlined,
   StarFilled,
 } from '@ant-design/icons'
 import {
@@ -51,6 +50,7 @@ function ArenaPage() {
   const [sourcesOpen, setSourcesOpen] = useState(false)
   const [sourcesTab, setSourcesTab] = useState<string>('all')
   const [draftQuestion, setDraftQuestion] = useState('')
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   const activeSessionId = useArenaStore((s) => s.activeSessionId)
   const activeSession = useArenaStore(
@@ -170,27 +170,38 @@ function ArenaPage() {
   const isActive = hasAnswers || isLoading
 
   return (
-    <div className="mx-auto w-full max-w-7xl flex gap-6 min-h-[calc(100vh-4rem)]">
-      {/* 桌面端侧边栏 - 只保留历史会话 */}
-      <aside className="hidden lg:block w-72 flex-shrink-0">
-        <div className="sticky top-6 h-[calc(100vh-5rem)]">
-          <SessionSidebar className="h-full" disabled={isLoading} />
-        </div>
+    <div className="min-h-full relative">
+      {/* 左侧可折叠侧边栏 - 固定定位 */}
+      <aside
+        className={`hidden lg:block fixed top-8 left-6 bottom-8 transition-all duration-300 ease-out z-10 ${
+          sidebarCollapsed ? 'w-16' : 'w-72'
+        }`}
+      >
+        <SessionSidebar
+          className="h-full w-full"
+          disabled={isLoading}
+          collapsed={sidebarCollapsed}
+          onCollapsedChange={setSidebarCollapsed}
+        />
       </aside>
 
-      {/* 主内容 */}
-      <div className="flex-1 min-w-0 flex flex-col">
+      {/* 主内容区 - 使用全局滚动，占据剩余所有空间 */}
+      <div
+        className={`min-w-0 flex flex-col transition-all duration-300 pr-4 ${
+          sidebarCollapsed ? 'lg:ml-24' : 'lg:ml-80'
+        }`}
+      >
         {/* 标题和输入区域 */}
         <div
           className={`transition-all duration-500 ease-out ${
             isActive ? 'pt-0' : 'flex-1 flex flex-col justify-center'
           }`}
         >
-          <div className="w-full max-w-4xl mx-auto">
+          <div className="w-full">
             {/* 页面标题 */}
             <div
               className={`text-center relative transition-all duration-500 ${
-                isActive ? 'mb-6' : 'mb-10'
+                isActive ? 'mb-6' : 'mb-8'
               }`}
             >
               {/* 移动端侧栏按钮 */}
@@ -203,81 +214,47 @@ function ArenaPage() {
                 历史
               </Button>
 
-              {/* Logo 和标题 */}
+              {/* Logo 和标题 - 水平排列 */}
               <div
-                className={`inline-flex flex-col items-center transition-all duration-500 ${
-                  isActive ? 'scale-90' : 'scale-100'
+                className={`inline-flex items-center gap-3 transition-all duration-500 ${
+                  isActive ? 'scale-95' : 'scale-100'
                 }`}
               >
                 {/* Logo */}
                 <div
-                  className={`relative mb-4 transition-all duration-500 ${
-                    isActive ? 'w-12 h-12' : 'w-20 h-20'
+                  className={`relative flex-shrink-0 transition-all duration-500 ${
+                    isActive ? 'w-10 h-10' : 'w-12 h-12'
                   }`}
                 >
-                  <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl rotate-6 opacity-20 blur-lg" />
-                  <div className="relative w-full h-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/25">
+                  <div className="absolute inset-0 bg-gradient-to-br from-teal-500 via-emerald-500 to-cyan-500 rounded-xl rotate-6 opacity-20 blur-lg" />
+                  <div className="relative w-full h-full bg-gradient-to-br from-teal-500 via-emerald-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg shadow-teal-500/25">
                     <TrophyOutlined
                       className={`text-white transition-all duration-500 ${
-                        isActive ? 'text-xl' : 'text-4xl'
+                        isActive ? 'text-lg' : 'text-2xl'
                       }`}
                     />
                   </div>
                 </div>
 
-                <Title
-                  level={isActive ? 4 : 2}
-                  className="!mb-2 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent"
-                >
-                  RAG 问答竞技场
-                </Title>
-
-                {!isActive && (
-                  <Paragraph className="text-slate-500 max-w-md animate-fade-in">
-                    <ThunderboltOutlined className="mr-2 text-amber-500" />
-                    提出问题，对比多个 AI 模型的回答，为最佳答案投票
-                  </Paragraph>
-                )}
+                <div className="flex flex-col items-start">
+                  <Title
+                    level={isActive ? 4 : 3}
+                    className="!mb-0 bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 bg-clip-text text-transparent"
+                  >
+                    RAG 问答竞技场
+                  </Title>
+                  {!isActive && (
+                    <span className="text-slate-500 text-sm mt-1 animate-fade-in">
+                      <ThunderboltOutlined className="mr-1.5 text-amber-500" />
+                      对比多个 AI 模型的回答，为最佳答案投票
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* 空状态特性展示 */}
-            {!isActive && (
-              <div className="grid grid-cols-3 gap-4 mb-10 animate-fade-in-up">
-                {[
-                  {
-                    icon: <RobotOutlined className="text-indigo-500" />,
-                    title: '多模型对比',
-                    desc: '同时获取多个 AI 的回答',
-                  },
-                  {
-                    icon: <FileTextOutlined className="text-purple-500" />,
-                    title: '引用溯源',
-                    desc: '每个回答都有来源出处',
-                  },
-                  {
-                    icon: <StarFilled className="text-amber-500" />,
-                    title: '社区投票',
-                    desc: '投票选出最优质回答',
-                  },
-                ].map((feature, i) => (
-                  <div
-                    key={i}
-                    className="glass-card rounded-2xl p-4 text-center hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
-                    style={{ animationDelay: `${i * 100}ms` }}
-                  >
-                    <div className="text-2xl mb-2">{feature.icon}</div>
-                    <div className="font-semibold text-slate-700 text-sm mb-1">
-                      {feature.title}
-                    </div>
-                    <div className="text-xs text-slate-500">{feature.desc}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-
             {/* 问题输入区域 */}
-            <div className={`transition-all duration-500 ${isActive ? 'mb-6' : 'mb-8'}`}>
+            <div className={`transition-all duration-500 ${isActive ? 'mb-6' : 'mb-0'}`}>
               <QuestionInput
                 key={activeSessionId}
                 loading={isLoading}
@@ -312,7 +289,7 @@ function ArenaPage() {
                 </div>
                 <div className="flex-shrink-0 flex items-center gap-2">
                   {citationsCount > 0 && (
-                    <Badge count={citationsCount} size="small" color="#6366f1">
+                    <Badge count={citationsCount} size="small" color="#14b8a6">
                       <Button
                         icon={<FileTextOutlined />}
                         onClick={() => {
@@ -362,7 +339,7 @@ function ArenaPage() {
       <Drawer
         title={
           <span className="flex items-center gap-2">
-            <HistoryOutlined className="text-indigo-500" />
+            <HistoryOutlined className="text-teal-500" />
             历史会话
           </span>
         }
@@ -386,9 +363,9 @@ function ArenaPage() {
       <Drawer
         title={
           <span className="flex items-center gap-2">
-            <FileTextOutlined className="text-indigo-500" />
+            <FileTextOutlined className="text-teal-500" />
             引用来源面板
-            <Badge count={citationsCount} size="small" color="#6366f1" />
+            <Badge count={citationsCount} size="small" color="#14b8a6" />
           </span>
         }
         placement="right"

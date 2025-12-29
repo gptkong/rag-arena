@@ -51,10 +51,10 @@ const providerConfig: Record<
     lightBg: 'bg-orange-50',
   },
   D: {
-    color: 'purple',
-    gradient: 'from-purple-500 to-pink-500',
-    bgGradient: 'from-purple-50 to-pink-50',
-    lightBg: 'bg-purple-50',
+    color: 'rose',
+    gradient: 'from-rose-500 to-orange-500',
+    bgGradient: 'from-rose-50 to-orange-50',
+    lightBg: 'bg-rose-50',
   },
 }
 
@@ -92,7 +92,7 @@ export function AnswerCard({
     <Card
       className={`
         h-full flex flex-col transition-all duration-300 !rounded-2xl overflow-hidden
-        ${isVoted ? 'ring-2 ring-indigo-500 shadow-xl shadow-indigo-500/20 animate-vote-glow' : 'hover:shadow-lg'}
+        ${isVoted ? 'ring-2 ring-teal-500 shadow-xl shadow-teal-500/20 animate-vote-glow' : 'hover:shadow-lg'}
         ${!hasContent && !hasError ? 'animate-pulse-soft' : ''}
       `}
       styles={{
@@ -152,7 +152,7 @@ export function AnswerCard({
             loading={loading}
             className={`
               !rounded-xl transition-all duration-300
-              ${isVoted ? '!shadow-lg !shadow-indigo-500/25' : ''}
+              ${isVoted ? '!shadow-lg !shadow-teal-500/25' : ''}
             `}
           >
             {isVoted ? '已投票' : '投票'}
@@ -173,7 +173,7 @@ export function AnswerCard({
         )}
         {!hasContent && !hasError && (
           <div className="flex items-center gap-2 text-slate-400 text-sm">
-            <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+            <div className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
             正在生成回答...
           </div>
         )}

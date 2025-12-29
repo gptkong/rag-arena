@@ -52,7 +52,7 @@ const getPresets = () => [
 const iconByKey: Record<string, React.ReactNode> = {
   'rag.citations.extract': <FileSearchOutlined className="text-sky-500" />,
   'rag.citations.verify': <SafetyCertificateOutlined className="text-emerald-500" />,
-  'rag.compare.4models': <BarChartOutlined className="text-purple-500" />,
+  'rag.compare.4models': <BarChartOutlined className="text-teal-500" />,
   'rag.summarize.actionable': <CheckSquareOutlined className="text-amber-500" />,
   'rag.write.dashboard_spec': <FileTextOutlined className="text-rose-500" />,
 }
@@ -133,24 +133,30 @@ export function QuestionInput({
   // 已有回答时，显示重新提问按钮
   if (disabled) {
     return (
-      <div className="w-full max-w-3xl mx-auto text-center">
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={handleReset}
-          size="large"
-          disabled={loading}
-          className="!rounded-xl !h-12 !px-8 !shadow-lg !shadow-indigo-500/25 hover:!shadow-xl hover:!shadow-indigo-500/30 transition-all duration-300"
-        >
-          新建会话
-        </Button>
+      <div className="w-full">
+        <div className="flex items-center justify-center gap-4 py-6 px-8 rounded-2xl bg-gradient-to-r from-slate-50 via-teal-50/30 to-emerald-50/30 border border-slate-100">
+          <div className="flex-1 text-left">
+            <div className="text-sm font-medium text-slate-600 mb-1">想要探索新问题？</div>
+            <div className="text-xs text-slate-400">开始一个新的对话，获取更多 AI 模型的回答</div>
+          </div>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={handleReset}
+            size="large"
+            disabled={loading}
+            className="!rounded-xl !h-11 !px-6 !text-sm !font-medium bg-gradient-to-r from-teal-500 via-emerald-500 to-cyan-500 !border-0 !shadow-lg !shadow-teal-500/25 hover:!shadow-xl hover:!shadow-teal-500/35 hover:scale-105 transition-all duration-300"
+          >
+            新会话
+          </Button>
+        </div>
       </div>
     )
   }
 
   // 头部内容：时间选择器 + Prompt 展开区
   const headerNode = (
-    <div className="border-b border-slate-100">
+    <div className="border-b border-slate-100/80">
       {/* Prompts 展开面板 */}
       <Collapse
         ghost
@@ -168,14 +174,14 @@ export function QuestionInput({
             label: (
               <span className="flex items-center gap-2 text-sm">
                 <BulbOutlined className="text-amber-500" />
-                <span className="font-medium text-slate-700">Prompt 模板库</span>
-                <span className="text-xs text-slate-400">
-                  ({ARENA_PROMPT_TEMPLATES.length} 个模板)
+                <span className="font-medium text-slate-600">Prompt 模板库</span>
+                <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                  {ARENA_PROMPT_TEMPLATES.length} 个模板
                 </span>
               </span>
             ),
             children: (
-              <div className="pb-2 max-h-52 overflow-auto">
+              <div className="pb-3 max-h-52 overflow-auto">
                 <Prompts items={promptItems} wrap onItemClick={handlePromptClick} />
               </div>
             ),
@@ -185,10 +191,12 @@ export function QuestionInput({
       />
 
       {/* 时间范围选择器 */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-slate-50 to-indigo-50/50">
-        <div className="flex items-center gap-2 text-slate-600">
-          <CalendarOutlined className="text-indigo-500" />
-          <span className="text-sm font-medium">时间范围</span>
+      <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-teal-50/50 via-emerald-50/30 to-cyan-50/50">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center">
+            <CalendarOutlined className="text-white text-xs" />
+          </div>
+          <span className="text-sm font-medium text-slate-600">时间范围</span>
         </div>
         <Space size="small">
           <RangePicker
@@ -199,7 +207,7 @@ export function QuestionInput({
             allowClear
             size="small"
             disabled={loading}
-            className="!rounded-lg"
+            className="!rounded-xl !border-slate-200 hover:!border-teal-400 focus-within:!border-teal-500 focus-within:!shadow-sm focus-within:!shadow-teal-500/20"
           />
           {dateRange && (
             <Tooltip title="清除时间范围">
@@ -208,7 +216,7 @@ export function QuestionInput({
                 size="small"
                 icon={<CloseCircleOutlined />}
                 onClick={() => setDateRange(null)}
-                className="!text-slate-400 hover:!text-slate-600"
+                className="!text-slate-400 hover:!text-red-500 hover:!bg-red-50 !rounded-lg transition-all"
               />
             </Tooltip>
           )}
@@ -218,47 +226,62 @@ export function QuestionInput({
   )
 
   return (
-    <div className="w-full max-w-3xl mx-auto">
-      <div className="glass-card rounded-2xl overflow-hidden shadow-lg shadow-slate-200/50 hover:shadow-xl hover:shadow-slate-200/60 transition-shadow duration-300">
-        <Sender
-          ref={senderRef}
-          value={mergedValue}
-          onChange={setMergedValue}
-          onSubmit={handleSubmit}
-          onCancel={() => setMergedValue('')}
-          loading={loading}
-          placeholder="输入您的问题，或展开模板库快速开始..."
-          autoSize={{ minRows: 2, maxRows: 6 }}
-          header={headerNode}
-          actions={(_, { SendButton, LoadingButton }) => {
-            if (loading) {
-              return <LoadingButton />
-            }
-            return (
-              <Tooltip title="发送 (Enter)">
-                <SendButton
-                  icon={<SendOutlined className="rotate-[-45deg]" />}
-                  className="!bg-gradient-to-r !from-indigo-500 !to-purple-500 hover:!from-indigo-600 hover:!to-purple-600 !border-0 !shadow-md !shadow-indigo-500/25"
-                />
-              </Tooltip>
-            )
-          }}
-        />
+    <div className="w-full">
+      {/* 主输入框卡片 */}
+      <div className="relative group">
+        {/* 背景光晕效果 */}
+        <div className="absolute -inset-1 bg-gradient-to-r from-teal-500 via-emerald-500 to-cyan-500 rounded-3xl opacity-15 blur-xl group-hover:opacity-25 transition-opacity duration-500" />
+
+        {/* 输入框容器 - 单一边框 */}
+        <div className="relative rounded-2xl overflow-hidden shadow-lg shadow-slate-200/40 hover:shadow-xl hover:shadow-teal-200/30 transition-all duration-300 bg-white/95 backdrop-blur-xl border border-slate-200/60 hover:border-teal-300/50">
+          <Sender
+            ref={senderRef}
+            value={mergedValue}
+            onChange={setMergedValue}
+            onSubmit={handleSubmit}
+            onCancel={() => setMergedValue('')}
+            loading={loading}
+            placeholder="输入您想问的问题，让多个 AI 模型为您解答..."
+            autoSize={{ minRows: 3, maxRows: 8 }}
+            header={headerNode}
+            className="!border-0 !rounded-none !bg-transparent [&_.ant-sender-content]:!bg-transparent [&_.ant-sender-header]:!border-0"
+            actions={(_, { SendButton, LoadingButton }) => {
+              if (loading) {
+                return (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-400 animate-pulse">正在思考...</span>
+                    <LoadingButton className="!rounded-xl" />
+                  </div>
+                )
+              }
+              return (
+                <Tooltip title="发送问题 (Enter)">
+                  <SendButton
+                    icon={<SendOutlined className="rotate-[-45deg] text-lg" />}
+                    className="!w-11 !h-11 !rounded-xl !bg-gradient-to-br !from-teal-500 !via-emerald-500 !to-cyan-500 hover:!from-teal-600 hover:!via-emerald-600 hover:!to-cyan-600 !border-0 !shadow-lg !shadow-teal-500/25 hover:!shadow-xl hover:!shadow-teal-500/35 hover:scale-105 transition-all duration-300"
+                  />
+                </Tooltip>
+              )
+            }}
+          />
+        </div>
       </div>
 
-      {/* 提示文本 */}
-      <div className="mt-3 text-center">
-        <span className="text-xs text-slate-400">
-          按{' '}
-          <kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-500 font-mono text-[10px]">
+      {/* 底部提示 */}
+      <div className="mt-4 flex items-center justify-center gap-4">
+        <div className="flex items-center gap-2 text-xs text-slate-400">
+          <kbd className="px-2 py-1 bg-white/80 rounded-lg text-slate-500 font-mono text-[11px] shadow-sm border border-slate-100">
             Enter
-          </kbd>{' '}
-          发送，
-          <kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-500 font-mono text-[10px]">
+          </kbd>
+          <span>发送</span>
+        </div>
+        <div className="w-px h-3 bg-slate-200" />
+        <div className="flex items-center gap-2 text-xs text-slate-400">
+          <kbd className="px-2 py-1 bg-white/80 rounded-lg text-slate-500 font-mono text-[11px] shadow-sm border border-slate-100">
             Shift + Enter
-          </kbd>{' '}
-          换行
-        </span>
+          </kbd>
+          <span>换行</span>
+        </div>
       </div>
     </div>
   )

@@ -26,7 +26,7 @@ const providerColors: Record<string, string> = {
   A: 'blue',
   B: 'green',
   C: 'orange',
-  D: 'purple',
+  D: 'magenta',
 }
 
 // 根据布局模式获取列宽配置
@@ -126,12 +126,12 @@ interface AnswerGridSkeletonProps {
 
 // 骨架卡片组件
 function SkeletonCard({ index }: { index: number }) {
-  const colors = ['blue', 'green', 'orange', 'purple']
+  const colors = ['blue', 'green', 'orange', 'magenta']
   const gradients = [
     'from-blue-500 to-cyan-500',
     'from-emerald-500 to-teal-500',
     'from-orange-500 to-amber-500',
-    'from-purple-500 to-pink-500',
+    'from-rose-500 to-orange-500',
   ]
   const labels = ['A', 'B', 'C', 'D']
 
@@ -189,13 +189,13 @@ export function AnswerGridSkeleton({ visible, count = 4 }: AnswerGridSkeletonPro
     <div className="w-full">
       {/* 顶部提示 */}
       <div className="text-center mb-6">
-        <div className="inline-flex items-center gap-3 px-5 py-3 rounded-full bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100">
-          <RobotOutlined className="text-indigo-500 text-lg animate-pulse" />
+        <div className="inline-flex items-center gap-3 px-5 py-3 rounded-full bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-100">
+          <RobotOutlined className="text-teal-500 text-lg animate-pulse" />
           <span className="text-slate-600 font-medium">多个 AI 模型正在思考您的问题...</span>
           <div className="flex gap-1">
-            <div className="w-2 h-2 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-            <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-            <div className="w-2 h-2 rounded-full bg-pink-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+            <div className="w-2 h-2 rounded-full bg-teal-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+            <div className="w-2 h-2 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '300ms' }} />
           </div>
         </div>
       </div>

@@ -59,10 +59,10 @@ const docTypeConfig: Record<
   api: {
     icon: <ApiOutlined />,
     label: 'API',
-    gradient: 'from-violet-500 to-purple-600',
-    bgColor: 'bg-violet-50',
-    borderColor: 'border-l-violet-500',
-    textColor: 'text-violet-600',
+    gradient: 'from-rose-500 to-pink-600',
+    bgColor: 'bg-rose-50',
+    borderColor: 'border-l-rose-500',
+    textColor: 'text-rose-600',
   },
   file: {
     icon: <FileOutlined />,
@@ -256,7 +256,7 @@ export function CitationCard({ citation, index }: CitationCardProps) {
                 group/link
               `}
             >
-              <LinkOutlined className="text-slate-400 group-hover/link:text-indigo-500 transition-colors" />
+              <LinkOutlined className="text-slate-400 group-hover/link:text-teal-500 transition-colors" />
               <span className="truncate max-w-[220px] font-medium">
                 {citation.source.replace(/^https?:\/\//, '').split('/')[0]}
               </span>
@@ -282,7 +282,7 @@ export function CitationList({ citations }: CitationListProps) {
   return (
     <div className="mt-4 pt-4 border-t border-slate-200">
       <div className="flex items-center gap-2 mb-3">
-        <FileTextOutlined className="text-indigo-500" />
+        <FileTextOutlined className="text-teal-500" />
         <span className="text-sm font-medium text-slate-700">
           参考来源 ({citations.length})
         </span>
