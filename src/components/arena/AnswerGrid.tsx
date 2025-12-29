@@ -1,5 +1,6 @@
 // AnswerGrid - 回答网格布局组件
 
+import { useState } from 'react'
 import { Row, Col, Tabs, Tag, Skeleton, Card } from 'antd'
 import { RobotOutlined } from '@ant-design/icons'
 import { AnswerCard } from './AnswerCard'
@@ -51,6 +52,9 @@ export function AnswerGrid({
   layoutMode = 'two-col',
   disableVoting = false,
 }: AnswerGridProps) {
+  // 当前悬浮在投票按钮上的回答 ID
+  const [hoveredAnswerId, setHoveredAnswerId] = useState<string | null>(null)
+
   if (answers.length === 0) {
     return null
   }
@@ -82,6 +86,8 @@ export function AnswerGrid({
                 disabled={disableVoting || (votedAnswerId !== null && votedAnswerId !== answer.id)}
                 loading={votingAnswerId === answer.id}
                 onVote={() => onVote(answer.id)}
+                isBlurred={hoveredAnswerId !== null && hoveredAnswerId !== answer.id}
+                onVoteHover={(isHovering) => setHoveredAnswerId(isHovering ? answer.id : null)}
               />
             ),
           }))}
@@ -109,6 +115,8 @@ export function AnswerGrid({
               disabled={disableVoting || (votedAnswerId !== null && votedAnswerId !== answer.id)}
               loading={votingAnswerId === answer.id}
               onVote={() => onVote(answer.id)}
+              isBlurred={hoveredAnswerId !== null && hoveredAnswerId !== answer.id}
+              onVoteHover={(isHovering) => setHoveredAnswerId(isHovering ? answer.id : null)}
             />
           </Col>
         ))}

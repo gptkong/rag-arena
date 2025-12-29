@@ -25,6 +25,10 @@ interface AnswerCardProps {
   loading?: boolean
   /** 点赞回调 */
   onVote: () => void
+  /** 是否模糊（其他卡片的投票按钮被悬浮时） */
+  isBlurred?: boolean
+  /** 投票按钮悬浮状态变化回调 */
+  onVoteHover?: (isHovering: boolean) => void
 }
 
 // 供应商标识颜色和渐变映射
@@ -71,6 +75,8 @@ export function AnswerCard({
   disabled,
   loading = false,
   onVote,
+  isBlurred = false,
+  onVoteHover,
 }: AnswerCardProps) {
   const config = providerConfig[answer.providerId] || defaultConfig
   const [citationsExpanded, setCitationsExpanded] = useState(true)
@@ -94,6 +100,7 @@ export function AnswerCard({
         flex flex-col transition-all duration-300 !rounded-2xl overflow-hidden
         ${isVoted ? 'ring-2 ring-teal-500 shadow-xl shadow-teal-500/20 animate-vote-glow' : 'hover:shadow-lg'}
         ${!hasContent && !hasError ? 'animate-pulse-soft' : ''}
+        ${isBlurred ? 'blur-[2px] opacity-60 scale-[0.98]' : ''}
       `}
       styles={{
         header: {
@@ -144,19 +151,24 @@ export function AnswerCard({
       }
       extra={
         <Tooltip title={isVoted ? '取消投票' : disabled ? '已投票给其他回答' : '投票'}>
-          <Button
-            type={isVoted ? 'primary' : 'default'}
-            icon={isVoted ? <LikeFilled /> : <LikeOutlined />}
-            onClick={onVote}
-            disabled={disabled && !isVoted}
-            loading={loading}
-            className={`
-              !rounded-xl transition-all duration-300
-              ${isVoted ? '!shadow-lg !shadow-teal-500/25' : ''}
-            `}
+          <div
+            onMouseEnter={() => onVoteHover?.(true)}
+            onMouseLeave={() => onVoteHover?.(false)}
           >
-            {isVoted ? '已投票' : '投票'}
-          </Button>
+            <Button
+              type={isVoted ? 'primary' : 'default'}
+              icon={isVoted ? <LikeFilled /> : <LikeOutlined />}
+              onClick={onVote}
+              disabled={disabled && !isVoted}
+              loading={loading}
+              className={`
+                !rounded-xl transition-all duration-300
+                ${isVoted ? '!shadow-lg !shadow-teal-500/25' : ''}
+              `}
+            >
+              {isVoted ? '已投票' : '投票'}
+            </Button>
+          </div>
         </Tooltip>
       }
     >
