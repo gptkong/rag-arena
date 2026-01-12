@@ -459,20 +459,31 @@ export function CitationDetailDrawer({ open, citation, onClose }: CitationDetail
                 {/* 要素提取 */}
                 {detail?.key_elements && (
                   <div>
-                    <Title level={5} className="mb-3 flex items-center gap-2">
-                      <BulbOutlined />
+                    <Title level={5} className="mb-4 flex items-center gap-2">
+                      <BulbOutlined className="text-amber-500" />
                       要素提取
                     </Title>
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       {detail.key_elements.persons && detail.key_elements.persons.length > 0 && (
-                        <div>
-                          <Text strong className="flex items-center gap-1 mb-2 block text-sm">
-                            <UserOutlined />
-                            人物
-                          </Text>
-                          <div className="flex flex-wrap gap-1.5">
+                        <div className="group p-3.5 bg-gradient-to-br from-purple-50 to-purple-50/50 rounded-lg border border-purple-200/60 hover:border-purple-300 hover:shadow-sm transition-all duration-200 cursor-pointer">
+                          <div className="flex items-center gap-2 mb-2.5">
+                            <div className="w-7 h-7 rounded-md bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-sm">
+                              <UserOutlined className="text-white text-xs" />
+                            </div>
+                            <Text strong className="text-sm text-slate-800">
+                              人物
+                            </Text>
+                            <span className="ml-auto text-xs text-slate-500 bg-white/60 px-2 py-0.5 rounded-full">
+                              {detail.key_elements.persons.length}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
                             {detail.key_elements.persons.map((person, i) => (
-                              <Tag key={i} color="purple" className="m-0">
+                              <Tag
+                                key={i}
+                                color="purple"
+                                className="m-0 !px-2.5 !py-1 !text-xs !rounded-md !border-purple-300/50 hover:!border-purple-400 hover:!shadow-sm transition-all duration-200 cursor-default"
+                              >
                                 {person}
                               </Tag>
                             ))}
@@ -480,14 +491,25 @@ export function CitationDetailDrawer({ open, citation, onClose }: CitationDetail
                         </div>
                       )}
                       {detail.key_elements.oragnizations && detail.key_elements.oragnizations.length > 0 && (
-                        <div>
-                          <Text strong className="flex items-center gap-1 mb-2 block text-sm">
-                            <BankOutlined />
-                            组织
-                          </Text>
-                          <div className="flex flex-wrap gap-1.5">
+                        <div className="group p-3.5 bg-gradient-to-br from-cyan-50 to-cyan-50/50 rounded-lg border border-cyan-200/60 hover:border-cyan-300 hover:shadow-sm transition-all duration-200 cursor-pointer">
+                          <div className="flex items-center gap-2 mb-2.5">
+                            <div className="w-7 h-7 rounded-md bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center shadow-sm">
+                              <BankOutlined className="text-white text-xs" />
+                            </div>
+                            <Text strong className="text-sm text-slate-800">
+                              组织
+                            </Text>
+                            <span className="ml-auto text-xs text-slate-500 bg-white/60 px-2 py-0.5 rounded-full">
+                              {detail.key_elements.oragnizations.length}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
                             {detail.key_elements.oragnizations.map((org, i) => (
-                              <Tag key={i} color="cyan" className="m-0">
+                              <Tag
+                                key={i}
+                                color="cyan"
+                                className="m-0 !px-2.5 !py-1 !text-xs !rounded-md !border-cyan-300/50 hover:!border-cyan-400 hover:!shadow-sm transition-all duration-200 cursor-default"
+                              >
                                 {org}
                               </Tag>
                             ))}
@@ -495,14 +517,25 @@ export function CitationDetailDrawer({ open, citation, onClose }: CitationDetail
                         </div>
                       )}
                       {detail.key_elements.events && detail.key_elements.events.length > 0 && (
-                        <div>
-                          <Text strong className="flex items-center gap-1 mb-2 block text-sm">
-                            <CalendarOutlined />
-                            事件
-                          </Text>
-                          <div className="flex flex-wrap gap-1.5">
+                        <div className="group p-3.5 bg-gradient-to-br from-orange-50 to-orange-50/50 rounded-lg border border-orange-200/60 hover:border-orange-300 hover:shadow-sm transition-all duration-200 cursor-pointer">
+                          <div className="flex items-center gap-2 mb-2.5">
+                            <div className="w-7 h-7 rounded-md bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-sm">
+                              <CalendarOutlined className="text-white text-xs" />
+                            </div>
+                            <Text strong className="text-sm text-slate-800">
+                              事件
+                            </Text>
+                            <span className="ml-auto text-xs text-slate-500 bg-white/60 px-2 py-0.5 rounded-full">
+                              {detail.key_elements.events.length}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
                             {detail.key_elements.events.map((event, i) => (
-                              <Tag key={i} color="orange" className="m-0">
+                              <Tag
+                                key={i}
+                                color="orange"
+                                className="m-0 !px-2.5 !py-1 !text-xs !rounded-md !border-orange-300/50 hover:!border-orange-400 hover:!shadow-sm transition-all duration-200 cursor-default"
+                              >
                                 {event}
                               </Tag>
                             ))}
@@ -510,11 +543,24 @@ export function CitationDetailDrawer({ open, citation, onClose }: CitationDetail
                         </div>
                       )}
                       {detail.key_elements.others && detail.key_elements.others.length > 0 && (
-                        <div>
-                          <Text strong className="mb-2 block text-sm">其他</Text>
-                          <div className="flex flex-wrap gap-1.5">
+                        <div className="group p-3.5 bg-gradient-to-br from-slate-50 to-slate-50/50 rounded-lg border border-slate-200/60 hover:border-slate-300 hover:shadow-sm transition-all duration-200 cursor-pointer">
+                          <div className="flex items-center gap-2 mb-2.5">
+                            <div className="w-7 h-7 rounded-md bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center shadow-sm">
+                              <BulbOutlined className="text-white text-xs" />
+                            </div>
+                            <Text strong className="text-sm text-slate-800">
+                              其他
+                            </Text>
+                            <span className="ml-auto text-xs text-slate-500 bg-white/60 px-2 py-0.5 rounded-full">
+                              {detail.key_elements.others.length}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
                             {detail.key_elements.others.map((other, i) => (
-                              <Tag key={i} className="m-0">
+                              <Tag
+                                key={i}
+                                className="m-0 !px-2.5 !py-1 !text-xs !rounded-md !border-slate-300/50 hover:!border-slate-400 hover:!shadow-sm transition-all duration-200 cursor-default !bg-white !text-slate-700"
+                              >
                                 {other}
                               </Tag>
                             ))}
