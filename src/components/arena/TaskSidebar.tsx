@@ -1,8 +1,8 @@
 // TaskSidebar - 任务列表侧边栏（树形结构）
 
 import type { CSSProperties } from 'react'
-import { useState, useMemo } from 'react'
-import { Modal, Empty, Badge, Tooltip, Input } from 'antd'
+import { useState, useMemo, useEffect, useRef } from 'react'
+import { Modal, Empty, Badge, Tooltip, Input, Spin } from 'antd'
 import {
   FolderOutlined,
   FolderOpenOutlined,
@@ -13,6 +13,7 @@ import {
   PlusOutlined,
   EditOutlined,
   DownOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons'
 import clsx from 'clsx'
 import { useArenaStore } from '@/stores/arena'
@@ -53,7 +54,35 @@ export function TaskSidebar({
     deleteSession,
     renameSession,
     setActiveTaskId,
+    fetchTasksFromServer,
+    isTasksLoading,
   } = useArenaStore()
+
+  // 获取 userId（从 localStorage 或使用默认值）
+  const getUserId = () => {
+    // 优先从 localStorage 获取
+    const storedUserId = localStorage.getItem('userId')
+    if (storedUserId) return storedUserId
+    
+    // 如果没有，使用默认值（实际应用中应该从用户登录信息获取）
+    return 'default_user'
+  }
+
+  // 使用 useRef 防止在 React StrictMode 下重复执行
+  const hasFetchedRef = useRef(false)
+
+  // 组件挂载时获取任务列表
+  useEffect(() => {
+    // 如果已经执行过或正在加载，直接返回（防止 StrictMode 下的重复执行）
+    if (hasFetchedRef.current || isTasksLoading) return
+    
+    const userId = getUserId()
+    if (userId) {
+      hasFetchedRef.current = true
+      fetchTasksFromServer(userId)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // 只在组件挂载时执行一次，fetchTasksFromServer 是稳定的引用
 
   // 编辑状态
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
@@ -107,13 +136,13 @@ export function TaskSidebar({
     setEditValue('')
   }
 
-  const handleCreateSession = (taskId: string, e: React.MouseEvent) => {
+  const handleCreateSession = async (taskId: string, e: React.MouseEvent) => {
     e.stopPropagation()
     if (disabled) return
     // 先切换到该任务，再创建会话
     setActiveTaskId(taskId)
-    setTimeout(() => {
-      startNewSession()
+    setTimeout(async () => {
+      await startNewSession()
       onAfterSelect?.()
     }, 0)
   }
@@ -247,14 +276,40 @@ export function TaskSidebar({
           <span className="font-semibold text-slate-700">任务列表</span>
           <Badge count={tasks.length} size="small" color="#14b8a6" />
         </div>
-        <Tooltip title="收起侧边栏">
-          <button
-            onClick={toggleCollapse}
-            className="w-7 h-7 rounded flex items-center justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all duration-200 cursor-pointer"
-          >
-            <LeftOutlined className="text-xs" />
-          </button>
-        </Tooltip>
+        <div className="flex items-center gap-1">
+          <Tooltip title="刷新任务列表">
+            <button
+              onClick={() => {
+                const userId = getUserId()
+                if (userId) {
+                  // 强制刷新，忽略 hasFetchedTasks 标志
+                  fetchTasksFromServer(userId, true)
+                }
+              }}
+              disabled={isTasksLoading || disabled}
+              className={clsx(
+                'w-7 h-7 rounded flex items-center justify-center transition-all duration-200 cursor-pointer',
+                isTasksLoading || disabled
+                  ? 'text-slate-300 cursor-not-allowed'
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+              )}
+            >
+              {isTasksLoading ? (
+                <Spin size="small" />
+              ) : (
+                <ReloadOutlined className="text-xs" />
+              )}
+            </button>
+          </Tooltip>
+          <Tooltip title="收起侧边栏">
+            <button
+              onClick={toggleCollapse}
+              className="w-7 h-7 rounded flex items-center justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all duration-200 cursor-pointer"
+            >
+              <LeftOutlined className="text-xs" />
+            </button>
+          </Tooltip>
+        </div>
       </div>
 
       {/* 新建任务按钮 */}

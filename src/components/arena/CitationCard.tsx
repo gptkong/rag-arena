@@ -72,7 +72,7 @@ export function CitationCard({ citation, index, onClick }: CitationCardProps) {
   }
 
   return (
-    <div 
+    <div
       className={`py-2 border-b border-slate-100 last:border-b-0 ${onClick ? 'cursor-pointer hover:bg-slate-50 transition-colors duration-200 rounded px-2 -mx-2 -my-1 my-1 hover:shadow-sm' : ''}`}
       onClick={handleClick}
     >
@@ -81,7 +81,7 @@ export function CitationCard({ citation, index, onClick }: CitationCardProps) {
         <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[10px] font-semibold flex items-center justify-center mt-0.5">
           {index + 1}
         </span>
-        
+
         <div className="flex-1 min-w-0">
           {/* 标题行：标题 + 关联度 */}
           <div className="flex items-start justify-between gap-3 mb-1.5">
@@ -113,7 +113,7 @@ export function CitationCard({ citation, index, onClick }: CitationCardProps) {
               <span className="inline-flex items-center gap-1 text-slate-600">
                 <ClockCircleOutlined className="text-[10px] text-slate-400" />
                 <span>{formattedDuration}</span>
-              </span>
+                </span>
             )}
             
             {/* 主号码 */}
@@ -129,24 +129,24 @@ export function CitationCard({ citation, index, onClick }: CitationCardProps) {
               <span className="inline-flex items-center gap-1 text-slate-600">
                 <ArrowRightOutlined className="text-[10px] text-slate-400" />
                 <span className="font-mono">{citation.callednumber}</span>
-              </span>
-            )}
-          </div>
+                    </span>
+                )}
+              </div>
 
           {/* 标签 */}
           {labels.length > 0 && (
             <div className="flex items-center gap-1.5 mt-2 flex-wrap">
               {labels.map((label, i) => (
-                <span
+                      <span
                   key={i}
                   className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-600"
-                >
+                      >
                   {label}
-                </span>
+                      </span>
               ))}
+                  </div>
+              )}
             </div>
-          )}
-        </div>
       </div>
     </div>
   )

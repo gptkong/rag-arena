@@ -208,3 +208,97 @@ export interface AskStreamRequest extends AskRequest {
   /** 是否启用流式响应 (query param) */
   stream?: boolean
 }
+
+// ============================================================================
+// 任务列表相关类型
+// ============================================================================
+
+/**
+ * 通用树形字典（任务列表接口返回的数据结构）
+ */
+export interface CommonTreeDict {
+  /** 任务ID或会话ID */
+  id: string
+  /** 任务名称或会话名称 */
+  val: string
+  /** 是否为叶子节点（false=任务, true=会话） */
+  leaf: boolean
+  /** 子节点（任务的会话列表） */
+  children?: CommonTreeDict[]
+}
+
+/**
+ * 任务列表响应
+ * 对应 API: GET /task/list
+ */
+export interface TaskListResponse {
+  /** 响应码 */
+  code: number
+  /** 响应消息 */
+  msg: string
+  /** 任务列表数据 */
+  data: CommonTreeDict[]
+}
+
+// ============================================================================
+// 会话相关类型
+// ============================================================================
+
+/**
+ * 聊天消息
+ */
+export interface ChatMessage {
+  /** 角色 */
+  role: string
+  /** 内容 */
+  content: string
+}
+
+/**
+ * 创建对话请求
+ * 对应 API: POST /conv/create
+ */
+export interface CreateConversationRequest {
+  /** 任务ID */
+  taskId: string
+  /** 私有ID（可选） */
+  priId?: string
+  /** 消息列表（可选） */
+  messages?: ChatMessage[]
+  /** 会话ID（可选） */
+  session_id?: string
+  /** 开始时间（可选） */
+  start_time?: string
+  /** 结束时间（可选） */
+  end_time?: string
+}
+
+/**
+ * 私有会话ID映射
+ */
+export interface PriIdMapping {
+  [key: string]: string
+}
+
+/**
+ * 创建对话响应数据
+ */
+export interface ConvCreatedVO {
+  /** 会话ID */
+  sessionId: string
+  /** 私有会话ID映射 私有ID,模型code */
+  priIdMapping: PriIdMapping
+}
+
+/**
+ * 创建对话响应
+ * 对应 API: POST /conv/create
+ */
+export interface CreateConversationResponse {
+  /** 响应码 */
+  code: number
+  /** 响应消息 */
+  msg: string
+  /** 响应数据 */
+  data: ConvCreatedVO
+}

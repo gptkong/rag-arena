@@ -1,8 +1,8 @@
 // Arena Store - RAG 问答竞技场状态管理（支持任务-会话两级结构）
 
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
 import type { Answer, Task } from '@/types/arena'
+import { arenaApi } from '@/services/arena'
 
 // ============================================================================
 // 类型定义
@@ -43,6 +43,10 @@ interface ArenaState {
   isLoading: boolean
   /** 点赞加载状态 */
   isVoting: boolean
+  /** 任务列表加载状态 */
+  isTasksLoading: boolean
+  /** 是否已从服务器获取过任务列表 */
+  hasFetchedTasks: boolean
 
   // Task Actions
   createTask: (title?: string) => string
@@ -50,15 +54,19 @@ interface ArenaState {
   renameTask: (taskId: string, title: string) => void
   toggleTaskExpanded: (taskId: string) => void
   setActiveTaskId: (taskId: string) => void
+  /** 从服务器获取任务列表 */
+  fetchTasksFromServer: (userId: string, force?: boolean) => Promise<void>
+  /** 从服务器获取指定任务的会话列表 */
+  fetchSessionsForTask: (userId: string, taskId: string) => Promise<void>
 
   // Session Actions
-  startNewSession: () => string
+  startNewSession: () => Promise<string>
   setActiveSessionId: (sessionId: string) => void
   deleteSession: (sessionId: string) => void
   renameSession: (sessionId: string, title: string) => void
 
   // Question/Answer Actions
-  startSessionWithQuestion: (question: string) => string
+  startSessionWithQuestion: (question: string) => Promise<string>
   setServerQuestionId: (questionId: string | null) => void
   setAnswers: (answers: Answer[]) => void
   appendAnswerDelta: (answerId: string, delta: string) => void
@@ -79,6 +87,12 @@ const MAX_SESSIONS_PER_TASK = 50
 function createId() {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
+// 获取 userId（从 localStorage 或使用默认值）
+function getUserId(): string {
+  const storedUserId = localStorage.getItem('userId')
+  return storedUserId || 'default_user'
 }
 
 function toSessionTitle(question: string) {
@@ -120,11 +134,8 @@ function createEmptySession(taskId: string, partial?: Partial<ArenaSession>): Ar
 // ============================================================================
 
 export const useArenaStore = create<ArenaState>()(
-  persist(
-    (set, get) => {
-      // 初始化：创建默认任务和会话
-      const initialTask = createEmptyTask({ title: '默认任务' })
-      const initialSession = createEmptySession(initialTask.id)
+  (set, get) => {
+    // 初始化：不创建默认任务和会话，等待从服务器获取
 
       // 辅助函数：更新当前会话
       const updateActiveSession = (updater: (session: ArenaSession) => ArenaSession) => {
@@ -143,19 +154,20 @@ export const useArenaStore = create<ArenaState>()(
       }
 
       return {
-        // 初始状态
-        tasks: [initialTask],
-        sessions: [initialSession],
-        activeTaskId: initialTask.id,
-        activeSessionId: initialSession.id,
+        // 初始状态：不持久化，从服务器获取
+        tasks: [],
+        sessions: [],
+        activeTaskId: '',
+        activeSessionId: '',
         isLoading: false,
         isVoting: false,
+        isTasksLoading: false,
+        hasFetchedTasks: false,
 
         // ========== Task Actions ==========
 
         createTask: (title) => {
           const newTask = createEmptyTask({ title: title || '新任务' })
-          const newSession = createEmptySession(newTask.id)
 
           set((state) => {
             // 限制任务数量
@@ -165,9 +177,8 @@ export const useArenaStore = create<ArenaState>()(
             }
             return {
               tasks,
-              sessions: [newSession, ...state.sessions],
               activeTaskId: newTask.id,
-              activeSessionId: newSession.id,
+              activeSessionId: '',
             }
           })
           return newTask.id
@@ -181,33 +192,29 @@ export const useArenaStore = create<ArenaState>()(
             // 如果删除了所有任务，创建新的默认任务
             if (remainingTasks.length === 0) {
               const newTask = createEmptyTask({ title: '默认任务' })
-              const newSession = createEmptySession(newTask.id)
               return {
                 tasks: [newTask],
-                sessions: [newSession],
+                sessions: [],
                 activeTaskId: newTask.id,
-                activeSessionId: newSession.id,
+                activeSessionId: '',
               }
             }
 
             // 如果删除的是当前任务，切换到第一个任务
             let nextActiveTaskId = state.activeTaskId
-            let nextActiveSessionId = state.activeSessionId
+            let nextActiveSessionId = ''
 
             if (state.activeTaskId === taskId) {
               nextActiveTaskId = remainingTasks[0].id
               const taskSessions = remainingSessions.filter((s) => s.taskId === nextActiveTaskId)
               nextActiveSessionId = taskSessions[0]?.id || ''
-
-              // 如果新任务没有会话，创建一个
-              if (!nextActiveSessionId) {
-                const newSession = createEmptySession(nextActiveTaskId)
-                return {
-                  tasks: remainingTasks,
-                  sessions: [...remainingSessions, newSession],
-                  activeTaskId: nextActiveTaskId,
-                  activeSessionId: newSession.id,
-                }
+              
+              // 获取新任务的会话列表
+              if (nextActiveTaskId) {
+                const userId = getUserId()
+                setTimeout(() => {
+                  get().fetchSessionsForTask(userId, nextActiveTaskId)
+                }, 0)
               }
             }
 
@@ -254,31 +261,75 @@ export const useArenaStore = create<ArenaState>()(
 
         // ========== Session Actions ==========
 
-        startNewSession: () => {
+        startNewSession: async () => {
           const { activeTaskId, sessions } = get()
-          const newSession = createEmptySession(activeTaskId)
+          
+          try {
+            // 调用创建对话接口
+            const userId = getUserId()
+            const response = await arenaApi.createConversation(userId, {
+              taskId: activeTaskId,
+              messages: [],
+            })
 
-          // 限制每个任务的会话数量
-          const taskSessions = sessions.filter((s) => s.taskId === activeTaskId)
-          let nextSessions = [newSession, ...sessions]
+            // 如果接口返回成功，使用服务器返回的 sessionId
+            let sessionId = ''
+            if (response.code === 200 || response.code === 0) {
+              sessionId = response.data.sessionId
+            } else {
+              // 如果接口返回失败，使用本地生成的 ID
+              console.warn('[ArenaStore] createConversation failed, using local session ID')
+              sessionId = createId()
+            }
 
-          if (taskSessions.length >= MAX_SESSIONS_PER_TASK) {
-            // 删除该任务下最旧的会话
-            const oldestSession = taskSessions.sort((a, b) => a.updatedAt - b.updatedAt)[0]
-            nextSessions = nextSessions.filter((s) => s.id !== oldestSession.id)
+            // 创建新会话，使用服务器返回的 sessionId（如果有）
+            const newSession = createEmptySession(activeTaskId, {
+              id: sessionId || createId(),
+            })
+
+            // 限制每个任务的会话数量
+            const taskSessions = sessions.filter((s) => s.taskId === activeTaskId)
+            let nextSessions = [newSession, ...sessions]
+
+            if (taskSessions.length >= MAX_SESSIONS_PER_TASK) {
+              // 删除该任务下最旧的会话
+              const oldestSession = taskSessions.sort((a, b) => a.updatedAt - b.updatedAt)[0]
+              nextSessions = nextSessions.filter((s) => s.id !== oldestSession.id)
+            }
+
+            set({
+              sessions: nextSessions,
+              activeSessionId: newSession.id,
+            })
+
+            touchTask(activeTaskId)
+            return newSession.id
+          } catch (error) {
+            // 如果接口调用失败，使用本地生成的会话
+            console.error('[ArenaStore] startNewSession failed, using local session:', error)
+            const { activeTaskId, sessions } = get()
+            const newSession = createEmptySession(activeTaskId)
+
+            const taskSessions = sessions.filter((s) => s.taskId === activeTaskId)
+            let nextSessions = [newSession, ...sessions]
+
+            if (taskSessions.length >= MAX_SESSIONS_PER_TASK) {
+              const oldestSession = taskSessions.sort((a, b) => a.updatedAt - b.updatedAt)[0]
+              nextSessions = nextSessions.filter((s) => s.id !== oldestSession.id)
+            }
+
+            set({
+              sessions: nextSessions,
+              activeSessionId: newSession.id,
+            })
+
+            touchTask(activeTaskId)
+            return newSession.id
           }
-
-          set({
-            sessions: nextSessions,
-            activeSessionId: newSession.id,
-          })
-
-          touchTask(activeTaskId)
-          return newSession.id
         },
 
         setActiveSessionId: (sessionId) => {
-          const { sessions, tasks } = get()
+          const { sessions } = get()
           const session = sessions.find((s) => s.id === sessionId)
           if (!session) return
 
@@ -335,7 +386,7 @@ export const useArenaStore = create<ArenaState>()(
 
         // ========== Question/Answer Actions ==========
 
-        startSessionWithQuestion: (question) => {
+        startSessionWithQuestion: async (question) => {
           const { activeTaskId, activeSessionId, sessions } = get()
           const active = sessions.find((s) => s.id === activeSessionId)
           const safeQuestion = question.trim()
@@ -348,13 +399,42 @@ export const useArenaStore = create<ArenaState>()(
             active.votedAnswerId
 
           if (shouldCreateNew) {
-            const newSession = createEmptySession(activeTaskId, { question: safeQuestion })
-            set((state) => ({
-              sessions: [newSession, ...state.sessions],
-              activeSessionId: newSession.id,
-            }))
-            touchTask(activeTaskId)
-            return newSession.id
+            // 调用创建对话接口
+            try {
+              const userId = getUserId()
+              const response = await arenaApi.createConversation(userId, {
+                taskId: activeTaskId,
+                messages: [],
+              })
+
+              let sessionId = ''
+              if (response.code === 200 || response.code === 0) {
+                sessionId = response.data.sessionId
+              } else {
+                sessionId = createId()
+              }
+
+              const newSession = createEmptySession(activeTaskId, {
+                id: sessionId || createId(),
+                question: safeQuestion,
+              })
+              set((state) => ({
+                sessions: [newSession, ...state.sessions],
+                activeSessionId: newSession.id,
+              }))
+              touchTask(activeTaskId)
+              return newSession.id
+            } catch (error) {
+              console.error('[ArenaStore] startSessionWithQuestion failed:', error)
+              // 失败时使用本地生成的会话
+              const newSession = createEmptySession(activeTaskId, { question: safeQuestion })
+              set((state) => ({
+                sessions: [newSession, ...state.sessions],
+                activeSessionId: newSession.id,
+              }))
+              touchTask(activeTaskId)
+              return newSession.id
+            }
           }
 
           // 更新当前会话
@@ -418,47 +498,191 @@ export const useArenaStore = create<ArenaState>()(
         },
 
         setVoting: (isVoting) => set({ isVoting }),
+
+        // ========== Server Task Actions ==========
+
+        fetchTasksFromServer: async (userId: string, force = false) => {
+          const { hasFetchedTasks, isTasksLoading } = get()
+          // 如果正在加载，直接返回（防止重复调用）
+          // force=true 时强制刷新，忽略 hasFetchedTasks 标志
+          if (isTasksLoading || (!force && hasFetchedTasks)) {
+            console.log('[ArenaStore] fetchTasksFromServer skipped: already loading or fetched')
+            return
+          }
+          
+          set({ isTasksLoading: true })
+          try {
+            const response = await arenaApi.getTaskList(userId)
+            console.log('[ArenaStore] fetchTasksFromServer response:', response)
+            // 接口返回 code: 200 表示成功，code: 0 也表示成功（兼容两种格式）
+            if ((response.code === 200 || response.code === 0) && Array.isArray(response.data)) {
+              // 将服务器返回的任务列表转换为本地 Task 格式
+              const serverTasks: Task[] = []
+              const serverSessions: ArenaSession[] = []
+              
+              // 遍历任务列表，解析任务和会话
+              response.data.forEach((item) => {
+                // 只处理任务（leaf: false）
+                if (!item.leaf) {
+                  // 检查是否已存在该任务（通过 id 匹配）
+                  const existingTask = get().tasks.find((t) => t.id === item.id)
+                  if (existingTask) {
+                    // 如果已存在，更新标题，保留其他属性
+                    serverTasks.push({
+                      ...existingTask,
+                      title: item.val,
+                      updatedAt: Date.now(),
+                    })
+                  } else {
+                    // 如果不存在，创建新任务
+                    serverTasks.push(
+                      createEmptyTask({
+                        id: item.id,
+                        title: item.val,
+                        expanded: true,
+                      })
+                    )
+                  }
+                  
+                  // 解析该任务下的会话（children）
+                  if (item.children && Array.isArray(item.children)) {
+                    item.children.forEach((child) => {
+                      // 只处理会话（leaf: true）
+                      if (child.leaf) {
+                        const existingSession = get().sessions.find((s) => s.id === child.id)
+                        if (existingSession) {
+                          // 如果已存在，更新标题，保留其他属性
+                          serverSessions.push({
+                            ...existingSession,
+                            taskId: item.id,
+                            title: child.val,
+                            updatedAt: Date.now(),
+                          })
+                        } else {
+                          // 如果不存在，创建新会话
+                          serverSessions.push(
+                            createEmptySession(item.id, {
+                              id: child.id,
+                              title: child.val,
+                            })
+                          )
+                        }
+                      }
+                    })
+                  }
+                }
+              })
+
+              // 只使用服务器返回的任务和会话，不保留本地数据（避免显示 mock 数据）
+              const mergedTasks = serverTasks
+
+              // 如果当前 activeTaskId 不在新列表中，切换到第一个任务
+              const currentActiveTaskId = get().activeTaskId
+              const hasActiveTask = mergedTasks.some((t) => t.id === currentActiveTaskId)
+
+              // 如果服务器返回的任务列表为空，保留至少一个默认任务
+              if (mergedTasks.length === 0) {
+                const defaultTask = createEmptyTask({ title: '默认任务' })
+                set({
+                  tasks: [defaultTask],
+                  sessions: [],
+                  isTasksLoading: false,
+                  hasFetchedTasks: true,
+                  activeTaskId: defaultTask.id,
+                  activeSessionId: '',
+                })
+              } else {
+                // 设置第一个任务为活动任务
+                const firstTaskId = hasActiveTask ? currentActiveTaskId : mergedTasks[0]?.id
+                
+                // 获取第一个任务的会话列表
+                const firstTaskSessions = serverSessions.filter((s) => s.taskId === firstTaskId)
+                const firstSessionId = firstTaskSessions[0]?.id || ''
+                
+                set({
+                  tasks: mergedTasks,
+                  sessions: serverSessions,
+                  isTasksLoading: false,
+                  hasFetchedTasks: true,
+                  activeTaskId: firstTaskId,
+                  activeSessionId: firstSessionId,
+                })
+              }
+            } else {
+              console.warn('[ArenaStore] Invalid task list response:', response)
+              set({ isTasksLoading: false, hasFetchedTasks: true })
+            }
+          } catch (error) {
+            console.error('[ArenaStore] Failed to fetch tasks from server:', error)
+            set({ isTasksLoading: false, hasFetchedTasks: true })
+          }
+        },
+
+        // ========== Fetch Sessions for Task ==========
+
+        fetchSessionsForTask: async (userId: string, taskId: string) => {
+          try {
+            // 重新获取任务列表，以获取最新的会话数据
+            const response = await arenaApi.getTaskList(userId)
+            
+            if ((response.code === 200 || response.code === 0) && Array.isArray(response.data)) {
+              // 找到对应的任务
+              const taskItem = response.data.find((item) => item.id === taskId && !item.leaf)
+              
+              if (taskItem && taskItem.children && Array.isArray(taskItem.children)) {
+                // 解析该任务下的会话
+                const taskSessions: ArenaSession[] = taskItem.children
+                  .filter((child) => child.leaf)
+                  .map((child) => {
+                    const existingSession = get().sessions.find((s) => s.id === child.id)
+                    if (existingSession) {
+                      // 如果已存在，更新标题，保留其他属性
+                      return {
+                        ...existingSession,
+                        taskId: taskId,
+                        title: child.val,
+                        updatedAt: Date.now(),
+                      }
+                    } else {
+                      // 如果不存在，创建新会话
+                      return createEmptySession(taskId, {
+                        id: child.id,
+                        title: child.val,
+                      })
+                    }
+                  })
+                
+                set((state) => {
+                  // 移除该任务下的旧会话，添加新获取的会话
+                  const otherSessions = state.sessions.filter((s) => s.taskId !== taskId)
+                  const allSessions = [...taskSessions, ...otherSessions]
+                  
+                  // 如果当前活动会话不在新列表中，选择第一个会话
+                  const currentSession = allSessions.find((s) => s.id === state.activeSessionId)
+                  const firstSession = taskSessions[0]
+                  
+                  return {
+                    sessions: allSessions,
+                    activeSessionId: currentSession?.id || firstSession?.id || '',
+                  }
+                })
+              } else {
+                // 如果任务不存在或没有会话，清空该任务的会话
+                set((state) => {
+                  const otherSessions = state.sessions.filter((s) => s.taskId !== taskId)
+                  return {
+                    sessions: otherSessions,
+                    activeSessionId: state.activeSessionId === taskId ? '' : state.activeSessionId,
+                  }
+                })
+              }
+            }
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            void userId // 保留参数，用于后续可能的接口调用
+          } catch (error) {
+            console.error('[ArenaStore] Failed to fetch sessions for task:', error)
+          }
+        },
       }
-    },
-    {
-      name: 'arena-session-store',
-      partialize: (state) => ({
-        tasks: state.tasks,
-        sessions: state.sessions,
-        activeTaskId: state.activeTaskId,
-        activeSessionId: state.activeSessionId,
-      }),
-      // 版本升级为 2，触发数据重置
-      version: 2,
-      onRehydrateStorage: () => (state) => {
-        if (!state) return
-
-        // 验证数据完整性
-        const hasValidTasks = Array.isArray(state.tasks) && state.tasks.length > 0
-        const hasValidSessions = Array.isArray(state.sessions) && state.sessions.length > 0
-
-        if (!hasValidTasks || !hasValidSessions) {
-          // 数据不完整，创建默认任务和会话
-          const newTask = createEmptyTask({ title: '默认任务' })
-          const newSession = createEmptySession(newTask.id)
-          state.tasks = [newTask]
-          state.sessions = [newSession]
-          state.activeTaskId = newTask.id
-          state.activeSessionId = newSession.id
-          return
-        }
-
-        // 验证 activeTaskId 有效性
-        if (!state.tasks.some((t) => t.id === state.activeTaskId)) {
-          state.activeTaskId = state.tasks[0].id
-        }
-
-        // 验证 activeSessionId 有效性
-        if (!state.sessions.some((s) => s.id === state.activeSessionId)) {
-          const taskSessions = state.sessions.filter((s) => s.taskId === state.activeTaskId)
-          state.activeSessionId = taskSessions[0]?.id || state.sessions[0].id
-        }
-      },
     }
   )
-)

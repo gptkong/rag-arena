@@ -5,7 +5,7 @@
  * 后续对接真实接口时，只需替换此文件中的实现即可
  */
 
-import type { ArenaResponse, VoteRequest, VoteResponse, StatsResponse, Citation, CitationDetail } from '@/types/arena'
+import type { ArenaResponse, VoteRequest, VoteResponse, StatsResponse, Citation, CitationDetail, TaskListResponse, CreateConversationRequest, CreateConversationResponse } from '@/types/arena'
 import type { DateRange } from '@/components/arena'
 import {
   MOCK_DELAY,
@@ -15,6 +15,7 @@ import {
   generateMockStatsResponse,
   splitTextToChunks,
 } from '@/data/mock'
+import { get, post } from '@/lib/request'
 
 // ============================================================================
 // SSE 流式事件类型定义
@@ -247,6 +248,94 @@ export async function getStats(): Promise<StatsResponse> {
 }
 
 /**
+ * 获取任务列表
+ * 
+ * @param userId 用户ID
+ * @returns 任务列表响应
+ * 
+ * @example
+ * ```ts
+ * const response = await getTaskList('user_123')
+ * console.log(response.data) // 任务列表
+ * ```
+ * 
+ * @remarks
+ * 真实接口对接时，需要调用:
+ * GET /task/list
+ * Headers: { userId: string }
+ * 
+ * 通过 Vite proxy 代理到: http://localhost:8901/task/list
+ * 前端调用路径: /api/task/list (会被 proxy 转发)
+ */
+export async function getTaskList(userId: string): Promise<TaskListResponse> {
+  console.log('getTaskList', userId)
+  try {
+    // 通过 proxy 调用，路径 /api/task/list 会被代理到 http://192.168.157.104:8901/task/list
+    // proxy 配置: /api -> http://192.168.157.104:8901 (去掉 /api 前缀)
+    const response = await get<TaskListResponse>('/api/task/list', {
+      headers: {
+        userId,
+      },
+    })
+    
+    console.log('[ArenaApi] getTaskList response:', response)
+    return response
+  } catch (error) {
+    // 如果接口调用失败，抛出错误，不返回 mock 数据
+    // 这样可以让调用方知道接口调用失败，而不是显示错误的 mock 数据
+    console.error('[ArenaApi] getTaskList failed:', error)
+    throw error
+  }
+}
+
+/**
+ * 创建对话
+ * 
+ * @param userId 用户ID
+ * @param request 创建对话请求
+ * @returns 创建对话响应
+ * 
+ * @example
+ * ```ts
+ * const response = await createConversation('user_123', {
+ *   taskId: 'task_1',
+ *   messages: []
+ * })
+ * console.log(response.data.sessionId) // 会话ID
+ * ```
+ * 
+ * @remarks
+ * 真实接口对接时，需要调用:
+ * POST /conv/create
+ * Headers: { userId: string }
+ * Body: CreateConversationRequest
+ * 
+ * 通过 Vite proxy 代理到: http://192.168.157.104:8901/conv/create
+ * 前端调用路径: /api/conv/create (会被 proxy 转发)
+ */
+export async function createConversation(
+  userId: string,
+  request: CreateConversationRequest
+): Promise<CreateConversationResponse> {
+  console.log('createConversation', userId, request)
+  try {
+    // 通过 proxy 调用，路径 /api/conv/create 会被代理到 http://192.168.157.104:8901/conv/create
+    const response = await post<CreateConversationResponse>('/api/conv/create', request, {
+      headers: {
+        userId,
+      },
+    })
+    
+    console.log('[ArenaApi] createConversation response:', response)
+    return response
+  } catch (error) {
+    // 如果接口调用失败，抛出错误
+    console.error('[ArenaApi] createConversation failed:', error)
+    throw error
+  }
+}
+
+/**
  * 获取引用详情
  * 
  * @param refId 引用ID
@@ -324,4 +413,8 @@ export const arenaApi = {
   getStats,
   /** 获取引用详情 */
   getCitationDetail,
+  /** 获取任务列表 */
+  getTaskList,
+  /** 创建对话 */
+  createConversation,
 }

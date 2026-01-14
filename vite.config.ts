@@ -18,4 +18,14 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    proxy: {
+      // 代理所有 /api 开头的请求到后端服务器
+      '/api': {
+        target: 'http://192.168.157.104:8901',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
+  },
 })

@@ -72,7 +72,7 @@ function ArenaPage() {
   // 提交问题
   const handleSubmit = async (q: string, dateRange?: DateRange) => {
     setDraftQuestion(q)
-    startSessionWithQuestion(q)
+    await startSessionWithQuestion(q)
     setLoading(true)
 
     try {
@@ -161,9 +161,9 @@ function ArenaPage() {
   }
 
   // 重新提问
-  const handleReset = () => {
+  const handleReset = async () => {
     if (isLoading) return
-    startNewSession()
+    await startNewSession()
   }
 
   const hasAnswers = answers.length > 0
