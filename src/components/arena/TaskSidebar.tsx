@@ -2,7 +2,7 @@
 
 import type { CSSProperties } from 'react'
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { Modal, Empty, Badge, Tooltip, Input, Spin } from 'antd'
+import { Modal, Empty, Badge, Tooltip, Input, Spin, Form, message } from 'antd'
 import {
   FolderOutlined,
   FolderOpenOutlined,
@@ -17,6 +17,7 @@ import {
 } from '@ant-design/icons'
 import clsx from 'clsx'
 import { useArenaStore } from '@/stores/arena'
+import { arenaApi } from '@/services/arena'
 
 interface TaskSidebarProps {
   className?: string
@@ -45,7 +46,6 @@ export function TaskSidebar({
     sessions,
     activeTaskId,
     activeSessionId,
-    createTask,
     deleteTask,
     renameTask,
     toggleTaskExpanded,
@@ -89,6 +89,11 @@ export function TaskSidebar({
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
 
+  // 新建任务弹窗状态
+  const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false)
+  const [createTaskForm] = Form.useForm()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
   // 按更新时间排序任务（使用 useMemo 缓存）
   const sortedTasks = useMemo(
     () => [...tasks].sort((a, b) => b.updatedAt - a.updatedAt),
@@ -103,8 +108,48 @@ export function TaskSidebar({
 
   const handleCreateTask = () => {
     if (disabled) return
-    createTask()
-    onAfterSelect?.()
+    setIsCreateTaskModalOpen(true)
+    createTaskForm.resetFields()
+  }
+
+  const handleCreateTaskSubmit = async () => {
+    try {
+      const values = await createTaskForm.validateFields()
+      setIsSubmitting(true)
+
+      const userId = getUserId()
+      const response = await arenaApi.addTask(userId, {
+        title: values.title,
+        description: values.description,
+      })
+
+      if (response.code === 0 && response.data) {
+        message.success('任务创建成功')
+        setIsCreateTaskModalOpen(false)
+        createTaskForm.resetFields()
+        
+        // 刷新任务列表
+        await fetchTasksFromServer(userId, true)
+        
+        onAfterSelect?.()
+      } else {
+        message.error(response.msg || '任务创建失败')
+      }
+    } catch (error) {
+      console.error('创建任务失败:', error)
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        // 表单验证错误，不需要显示错误消息
+        return
+      }
+      message.error('任务创建失败，请重试')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleCreateTaskCancel = () => {
+    setIsCreateTaskModalOpen(false)
+    createTaskForm.resetFields()
   }
 
   const handleDeleteTask = (taskId: string, e: React.MouseEvent) => {
@@ -200,7 +245,7 @@ export function TaskSidebar({
         <Tooltip title="展开侧边栏" placement="right">
           <button
             onClick={toggleCollapse}
-            className="w-10 h-10 rounded bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center text-white hover:from-teal-600 hover:to-emerald-600 transition-all duration-300 shadow-md shadow-teal-500/25"
+            className="flex items-center justify-center w-10 h-10 text-white transition-all duration-300 rounded shadow-md bg-gradient-to-br from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 shadow-teal-500/25"
           >
             <RightOutlined className="text-sm" />
           </button>
@@ -226,7 +271,7 @@ export function TaskSidebar({
         <div className="w-6 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
 
         {/* 任务列表缩略图 */}
-        <div className="flex-1 overflow-auto w-full px-2 space-y-2">
+        <div className="flex-1 w-full px-2 space-y-2 overflow-auto">
           {sortedTasks.slice(0, 10).map((task) => (
             <Tooltip key={task.id} title={task.title} placement="right">
               <button
@@ -251,7 +296,7 @@ export function TaskSidebar({
             </Tooltip>
           ))}
           {tasks.length > 10 && (
-            <div className="text-center text-xs text-slate-500">+{tasks.length - 10}</div>
+            <div className="text-xs text-center text-slate-500">+{tasks.length - 10}</div>
           )}
         </div>
 
@@ -270,8 +315,8 @@ export function TaskSidebar({
       {/* 标题栏 */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center">
-            <FolderOutlined className="text-white text-xs" />
+          <div className="flex items-center justify-center rounded w-7 h-7 bg-gradient-to-br from-teal-500 to-emerald-500">
+            <FolderOutlined className="text-xs text-white" />
           </div>
           <span className="font-semibold text-slate-700">任务列表</span>
           <Badge count={tasks.length} size="small" color="#14b8a6" />
@@ -304,7 +349,7 @@ export function TaskSidebar({
           <Tooltip title="收起侧边栏">
             <button
               onClick={toggleCollapse}
-              className="w-7 h-7 rounded flex items-center justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all duration-200 cursor-pointer"
+              className="flex items-center justify-center transition-all duration-200 rounded cursor-pointer w-7 h-7 text-slate-500 hover:text-slate-700 hover:bg-slate-100"
             >
               <LeftOutlined className="text-xs" />
             </button>
@@ -330,7 +375,7 @@ export function TaskSidebar({
       </div>
 
       {/* 任务树形列表 */}
-      <div className="flex-1 overflow-auto p-2">
+      <div className="flex-1 p-2 overflow-auto">
         {tasks.length === 0 ? (
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无任务" className="my-8" />
         ) : (
@@ -357,7 +402,7 @@ export function TaskSidebar({
                     )}
                   >
                     {/* 展开/折叠图标 */}
-                    <span className="w-4 h-4 flex items-center justify-center text-slate-500">
+                    <span className="flex items-center justify-center w-4 h-4 text-slate-500">
                       {task.expanded ? (
                         <DownOutlined className="text-xs" />
                       ) : (
@@ -413,11 +458,11 @@ export function TaskSidebar({
                     />
 
                     {/* 操作按钮 */}
-                    <div className="hidden group-hover:flex items-center gap-1">
+                    <div className="items-center hidden gap-1 group-hover:flex">
                       <Tooltip title="新建会话">
                         <button
                           onClick={(e) => handleCreateSession(task.id, e)}
-                          className="w-6 h-6 rounded flex items-center justify-center text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer"
+                          className="flex items-center justify-center w-6 h-6 transition-colors rounded cursor-pointer text-slate-500 hover:text-emerald-600 hover:bg-emerald-50"
                         >
                           <PlusOutlined className="text-xs" />
                         </button>
@@ -425,7 +470,7 @@ export function TaskSidebar({
                       <Tooltip title="重命名">
                         <button
                           onClick={(e) => handleStartEditTask(task.id, task.title, e)}
-                          className="w-6 h-6 rounded flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                          className="flex items-center justify-center w-6 h-6 transition-colors rounded cursor-pointer text-slate-500 hover:text-blue-600 hover:bg-blue-50"
                         >
                           <EditOutlined className="text-xs" />
                         </button>
@@ -433,7 +478,7 @@ export function TaskSidebar({
                       <Tooltip title="删除">
                         <button
                           onClick={(e) => handleDeleteTask(task.id, e)}
-                          className="w-6 h-6 rounded flex items-center justify-center text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                          className="flex items-center justify-center w-6 h-6 transition-colors rounded cursor-pointer text-slate-500 hover:text-red-600 hover:bg-red-50"
                         >
                           <DeleteOutlined className="text-xs" />
                         </button>
@@ -501,13 +546,13 @@ export function TaskSidebar({
 
                             {/* 操作按钮 */}
                             {!isSessionActive && (
-                              <div className="hidden group-hover:flex items-center gap-1">
+                              <div className="items-center hidden gap-1 group-hover:flex">
                                 <Tooltip title="重命名">
                                   <button
                                     onClick={(e) =>
                                       handleStartEditSession(session.id, session.title, e)
                                     }
-                                    className="w-5 h-5 rounded flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                                    className="flex items-center justify-center w-5 h-5 transition-colors rounded cursor-pointer text-slate-500 hover:text-blue-600 hover:bg-blue-50"
                                   >
                                     <EditOutlined className="text-xs" />
                                   </button>
@@ -515,7 +560,7 @@ export function TaskSidebar({
                                 <Tooltip title="删除">
                                   <button
                                     onClick={(e) => handleDeleteSession(session.id, e)}
-                                    className="w-5 h-5 rounded flex items-center justify-center text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                                    className="flex items-center justify-center w-5 h-5 transition-colors rounded cursor-pointer text-slate-500 hover:text-red-600 hover:bg-red-50"
                                   >
                                     <DeleteOutlined className="text-xs" />
                                   </button>
@@ -531,7 +576,7 @@ export function TaskSidebar({
                                     onClick={(e) =>
                                       handleStartEditSession(session.id, session.title, e)
                                     }
-                                    className="w-5 h-5 rounded flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-colors"
+                                    className="flex items-center justify-center w-5 h-5 transition-colors rounded text-white/70 hover:text-white hover:bg-white/20"
                                   >
                                     <EditOutlined className="text-xs" />
                                   </button>
@@ -539,7 +584,7 @@ export function TaskSidebar({
                                 <Tooltip title="删除">
                                   <button
                                     onClick={(e) => handleDeleteSession(session.id, e)}
-                                    className="w-5 h-5 rounded flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-colors"
+                                    className="flex items-center justify-center w-5 h-5 transition-colors rounded text-white/70 hover:text-white hover:bg-white/20"
                                   >
                                     <DeleteOutlined className="text-xs" />
                                   </button>
@@ -561,7 +606,7 @@ export function TaskSidebar({
                             : 'text-slate-500 hover:text-emerald-600 hover:bg-emerald-50/50 cursor-pointer'
                         )}
                       >
-                        <span className="w-5 h-5 rounded flex items-center justify-center">
+                        <span className="flex items-center justify-center w-5 h-5 rounded">
                           <PlusOutlined className="text-xs" />
                         </span>
                         <span>新建会话</span>
@@ -574,6 +619,70 @@ export function TaskSidebar({
           </div>
         )}
       </div>
+
+      {/* 新建任务弹窗 */}
+      <Modal
+        title={
+          <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center w-8 h-8 rounded bg-gradient-to-br from-teal-500 to-emerald-500">
+              <PlusOutlined className="text-sm text-white" />
+            </div>
+            <span className="text-lg font-semibold text-slate-700">新建任务</span>
+          </div>
+        }
+        open={isCreateTaskModalOpen}
+        onOk={handleCreateTaskSubmit}
+        onCancel={handleCreateTaskCancel}
+        confirmLoading={isSubmitting}
+        okText="创建"
+        cancelText="取消"
+        width={520}
+        destroyOnClose
+        okButtonProps={{
+          className: 'bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 border-0',
+        }}
+        className="[&_.ant-modal-header]:border-b [&_.ant-modal-header]:border-slate-200"
+      >
+        <Form
+          form={createTaskForm}
+          layout="vertical"
+          className="mt-2"
+        >
+          <Form.Item
+            label={<span className="font-medium text-slate-700">任务标题</span>}
+            name="title"
+            rules={[
+              { required: true, message: '请输入任务标题' },
+              { max: 100, message: '任务标题不能超过100个字符' },
+            ]}
+          >
+            <Input
+              placeholder="请输入任务标题"
+              maxLength={100}
+              showCount
+              autoFocus
+              className="rounded-md"
+              size="large"
+            />
+          </Form.Item>
+
+          <Form.Item
+            label={<span className="font-medium text-slate-700">任务描述</span>}
+            name="description"
+            rules={[
+              { max: 500, message: '任务描述不能超过500个字符' },
+            ]}
+          >
+            <Input.TextArea
+              placeholder="请输入任务描述（可选）"
+              rows={4}
+              maxLength={500}
+              showCount
+              className="rounded-md"
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   )
 }

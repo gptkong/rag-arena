@@ -1,8 +1,10 @@
 /**
  * HTTP 请求工具
  * 
- * 当前为 Mock 模式，此模块暂未使用
- * 后续对接真实接口时启用
+ * 支持三种模式：
+ * - mock 模式：使用 mock 数据，不发起真实请求
+ * - dev 模式：使用相对路径，通过 Vite proxy 代理到开发服务器
+ * - prod 模式：使用环境变量配置的正式环境 API 地址
  * 
  * @example
  * ```ts
@@ -18,16 +20,34 @@
 
 import axios, { type AxiosRequestConfig } from 'axios'
 
-// 开发环境强制使用相对路径，确保走 Vite proxy
-// 生产环境可以通过环境变量配置绝对路径
+/**
+ * 获取 API 基础地址
+ * 根据不同的模式返回不同的 baseURL：
+ * - mock 模式：返回空字符串（实际不会发起请求）
+ * - dev 模式：返回空字符串（使用相对路径，走 Vite proxy）
+ * - prod 模式：返回环境变量配置的正式环境地址
+ */
 const getBaseURL = () => {
+  const apiMode = import.meta.env.VITE_API_MODE || 'dev'
   const envURL = import.meta.env.VITE_API_BASE_URL
-  // 开发环境（dev）强制使用相对路径，走 proxy
-  if (import.meta.env.DEV) {
+  
+  // mock 模式：返回空字符串（实际不会发起请求，由服务层处理）
+  if (apiMode === 'mock') {
     return ''
   }
-  // 生产环境使用环境变量配置的 URL，如果没有则使用相对路径
-  return envURL || ''
+  
+  // dev 模式：使用相对路径，走 Vite proxy
+  if (apiMode === 'dev') {
+    return ''
+  }
+  
+  // prod 模式：使用环境变量配置的正式环境地址
+  if (apiMode === 'prod') {
+    return envURL || ''
+  }
+  
+  // 默认使用相对路径
+  return ''
 }
 
 const request = axios.create({
@@ -36,10 +56,9 @@ const request = axios.create({
   timeout: 60000,
 })
 
-// 开发环境下打印 baseURL，方便调试
-if (import.meta.env.DEV) {
-  console.log('[Request] baseURL:', request.defaults.baseURL || '(empty, will use relative path)')
-}
+// 打印当前模式和 baseURL，方便调试
+const apiMode = import.meta.env.VITE_API_MODE || 'dev'
+console.log(`[Request] API Mode: ${apiMode}, baseURL:`, request.defaults.baseURL || '(empty, will use relative path)')
 
 request.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')

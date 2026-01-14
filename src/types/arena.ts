@@ -25,6 +25,36 @@ export interface Task {
   expanded: boolean
 }
 
+/**
+ * 添加任务请求
+ * 对应 API: POST /task/add
+ */
+export interface TaskAddRequest {
+  /** 任务名称 */
+  title?: string
+  /** 任务描述 */
+  description?: string
+  /** 支撑单位 */
+  supportUnit?: string
+  /** 业务方向 */
+  busDir?: string
+  /** 工作目标 */
+  workGoal?: string
+}
+
+/**
+ * 添加任务响应
+ * 对应 API: POST /task/add
+ */
+export interface TaskAddResponse {
+  /** 响应码 */
+  code: number
+  /** 响应消息 */
+  msg: string
+  /** 响应数据 */
+  data: boolean
+}
+
 // ============================================================================
 // 引用 (Citation) 相关类型
 // ============================================================================

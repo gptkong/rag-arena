@@ -4,8 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev": "vite --mode dev",
+    "dev:mock": "vite --mode mock",
+    "dev:dev": "vite --mode dev",
+    "build": "tsc -b && vite build --mode production",
+    "build:prod": "tsc -b && vite build --mode production",
     "lint": "node -r ./scripts/structuredClonePolyfill.cjs ./node_modules/eslint/bin/eslint.js .",
     "preview": "vite preview"
   },
