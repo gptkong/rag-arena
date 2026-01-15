@@ -103,7 +103,6 @@ export function QuestionInput({
   const {
     activeTaskId,
     activeSessionId,
-    sessions,
     startSessionWithQuestion,
     setLoading,
     setAnswers,
@@ -146,7 +145,7 @@ export function QuestionInput({
       }
 
       // 获取当前会话的消息历史
-      const currentSession = sessions.find((s) => s.id === sessionId)
+      const currentSession = useArenaStore.getState().sessions.find((s) => s.id === sessionId)
       const messages = currentSession
         ? [
             ...(currentSession.answers.map((a) => ({
@@ -170,53 +169,88 @@ export function QuestionInput({
         end_time: endTime,
       }
 
-      // 初始化答案
+      // 初始化答案 - 预先创建4个模型框（A、B、C、D），确保它们一直存在
       setServerQuestionId(null)
-      setAnswers([])
-
-      // 流式内容缓冲区
-      const deltaBuffer = new Map<string, string>()
-      let flushScheduled = false
-
-      const flush = () => {
-        flushScheduled = false
-        for (const [answerId, delta] of deltaBuffer) {
-          if (delta) appendAnswerDelta(answerId, delta)
-        }
-        deltaBuffer.clear()
+      
+      // 将 maskCode 映射到 providerId (ALPHA->A, BETA->B, CHARLIE->C, DELTA->D)
+      const providerIdMap: Record<string, string> = {
+        ALPHA: 'A',
+        BETA: 'B',
+        CHARLIE: 'C',
+        DELTA: 'D',
       }
+      
+      // 创建4个空的answer框，使用providerId作为id
+      const initialAnswers = ['A', 'B', 'C', 'D'].map((providerId) => ({
+        id: providerId, // 使用providerId作为id，方便根据maskCode查找
+        providerId,
+        content: '',
+      }))
+      setAnswers(initialAnswers)
 
-      const scheduleFlush = () => {
-        if (flushScheduled) return
-        flushScheduled = true
-        requestAnimationFrame(flush)
-      }
+      // 记录 privateId 到 providerId 的映射，用于onDone时分配citations
+      const privateIdToProviderId = new Map<string, string>()
 
-      // 调用流式接口
+      // 调用流式接口 - 立即更新，不使用缓冲
       await arenaApi.chatConversation(getUserId(), request, {
-        onDelta: (sessionId, content, privateId) => {
-          // 使用 privateId 或 sessionId 作为 answerId
-          const answerId = privateId || `answer_${sessionId}`
-          deltaBuffer.set(answerId, `${deltaBuffer.get(answerId) || ''}${content}`)
-          scheduleFlush()
+        onDelta: (sessionId, content, privateId, maskCode, maskName) => {
+          // 过滤掉 <think> 标签内容（模型的思考过程，不应该显示）
+          // 只过滤纯标签或只包含换行的内容
+          const trimmedContent = content.trim()
+          if (trimmedContent === '<think>' || trimmedContent === '</think>' || trimmedContent === '') {
+            return
+          }
+          
+          // 根据 maskCode 映射到 providerId，找到对应的 answer
+          if (!maskCode) return
+          
+          const providerId = providerIdMap[maskCode] || maskCode.charAt(0)
+          const answerId = providerId // 使用providerId作为answerId
+          
+          // 记录 privateId 到 providerId 的映射
+          if (privateId) {
+            privateIdToProviderId.set(privateId, providerId)
+          }
+          
+          // 立即追加内容到对应的answer框 - 确保实时显示
+          appendAnswerDelta(answerId, content)
         },
         onDone: (sessionId, citations, privateId) => {
-          flush()
-          const answerId = privateId || `answer_${sessionId}`
-          finalizeAnswer(answerId, {
-            citations,
-          })
+          // 根据 privateId 找到对应的 providerId，然后更新对应的 answer
+          if (privateId && privateIdToProviderId.has(privateId)) {
+            const providerId = privateIdToProviderId.get(privateId)!
+            finalizeAnswer(providerId, {
+              citations,
+            })
+          } else if (citations) {
+            // 如果没有privateId映射，但有citations，尝试更新所有answer
+            // 这种情况应该很少见
+            const currentSessions = useArenaStore.getState().sessions
+            const currentSession = currentSessions.find((s) => s.id === sessionId)
+            if (currentSession) {
+              currentSession.answers.forEach((answer) => {
+                if (!answer.citations || answer.citations.length === 0) {
+                  finalizeAnswer(answer.id, {
+                    citations,
+                  })
+                }
+              })
+            }
+          }
         },
         onError: (error) => {
-          flush()
           message.error(error.message || '获取回答失败，请重试')
-          setAnswerError(`answer_${sessionId}`, error.message)
+          // 为所有答案设置错误（如果无法确定具体是哪个模型出错）
+          initialAnswers.forEach((answer) => {
+            setAnswerError(answer.id, error.message)
+          })
         },
       })
     } catch (error) {
       message.error(error instanceof Error ? error.message : '获取回答失败，请重试')
       setServerQuestionId(null)
-      setAnswers([])
+      // 保持4个模型框存在，不清空
+      // setAnswers([]) // 注释掉，保持4个框显示
     } finally {
       setIsStreaming(false)
       setLoading(false)

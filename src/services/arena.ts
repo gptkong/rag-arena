@@ -551,7 +551,7 @@ export interface ChatStreamEvent {
  */
 export interface ChatStreamHandlers {
   /** 增量内容回调 */
-  onDelta: (sessionId: string, content: string, privateId?: string) => void
+  onDelta: (sessionId: string, content: string, privateId?: string, maskCode?: string, maskName?: string) => void
   /** 完成回调 */
   onDone: (sessionId: string, citations?: Citation[], privateId?: string) => void
   /** 错误回调 */
@@ -652,7 +652,8 @@ export async function chatConversation(
           const choice = data.choices[0]
           if (choice.delta?.content) {
             accumulatedContent += choice.delta.content
-            handlers.onDelta(currentSessionId, choice.delta.content, currentPrivateId)
+            // 传递 maskCode 和 maskName 以便创建 answer 时使用
+            handlers.onDelta(currentSessionId, choice.delta.content, currentPrivateId, data.maskCode, data.maskName)
           }
           
           // 如果完成，调用 onDone
