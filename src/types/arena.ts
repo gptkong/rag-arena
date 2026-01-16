@@ -187,6 +187,52 @@ export interface VoteResponse {
   message?: string
 }
 
+/**
+ * 评分数据
+ * 用户对回答的详细评分
+ */
+export interface RatingData {
+  /** 耗时评分 (1-5) */
+  timeCost: number
+  /** 思考内容评分 (1-5) */
+  thinkingContent: number
+  /** 回答准确度评分 (1-5) */
+  answerAccuracy: number
+  /** 思考敏感度评分 (1-5) */
+  thinkingSensitivity: number
+  /** 引用内容摘要评分 (1-5) */
+  citationSummary: number
+  /** 标签准确度评分 (1-5) */
+  tagAccuracy: number
+  /** 智能化处理评分 (1-5) */
+  intelligentProcessing: number
+  /** 备注 */
+  remark?: string
+}
+
+/**
+ * 提交评分请求
+ * 对应 API: POST /api/arena/rating
+ */
+export interface SubmitRatingRequest {
+  /** 问题 ID */
+  questionId: string
+  /** 回答 ID */
+  answerId: string
+  /** 评分数据 */
+  rating: RatingData
+}
+
+/**
+ * 提交评分响应
+ */
+export interface SubmitRatingResponse {
+  /** 是否成功 */
+  success: boolean
+  /** 错误信息 (可选) */
+  message?: string
+}
+
 // ============================================================================
 // 统计 (Stats) 相关类型
 // ============================================================================

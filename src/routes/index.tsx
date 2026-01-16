@@ -17,9 +17,11 @@ import {
   LayoutSwitcher,
   TaskSidebar,
   CitationSourcesPanel,
+  RatingModal,
   type LayoutMode,
   type DateRange,
 } from '@/components/arena'
+import type { RatingData } from '@/types/arena'
 import { buildSourcesItemsFromAnswers } from '@/lib/citationSources'
 import { useArenaStore } from '@/stores/arena'
 import { arenaApi } from '@/services/arena'
@@ -51,6 +53,9 @@ function ArenaPage() {
   const [sourcesTab, setSourcesTab] = useState<string>('all')
   const [draftQuestion, setDraftQuestion] = useState('')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [ratingModalOpen, setRatingModalOpen] = useState(false)
+  const [ratingAnswerId, setRatingAnswerId] = useState<string | null>(null)
+  const [ratingProviderId, setRatingProviderId] = useState<string>('')
 
   const activeSessionId = useArenaStore((s) => s.activeSessionId)
   const activeSession = useArenaStore(
@@ -153,10 +158,35 @@ function ArenaPage() {
       await arenaApi.submitVote({ questionId, answerId })
       setVotedAnswerId(answerId)
       message.success('投票成功！')
+      
+      // 找到对应的回答，获取 providerId
+      const answer = answers.find((a) => a.id === answerId)
+      if (answer) {
+        setRatingAnswerId(answerId)
+        setRatingProviderId(answer.providerId)
+        setRatingModalOpen(true)
+      }
     } catch (error) {
       message.error(error instanceof Error ? error.message : '投票失败，请重试')
     } finally {
       setVotingAnswerId(null)
+    }
+  }
+
+  // 提交评分
+  const handleSubmitRating = async (ratingData: RatingData) => {
+    if (!questionId || !ratingAnswerId) return
+
+    try {
+      await arenaApi.submitRating({
+        questionId,
+        answerId: ratingAnswerId,
+        rating: ratingData,
+      })
+      message.success('评分提交成功！')
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '评分提交失败，请重试')
+      throw error
     }
   }
 
@@ -413,6 +443,21 @@ function ArenaPage() {
           />
         )}
       </Drawer>
+
+      {/* 评分弹窗 */}
+      {ratingAnswerId && (
+        <RatingModal
+          open={ratingModalOpen}
+          answerId={ratingAnswerId}
+          providerId={ratingProviderId}
+          onClose={() => {
+            setRatingModalOpen(false)
+            setRatingAnswerId(null)
+            setRatingProviderId('')
+          }}
+          onSubmit={handleSubmitRating}
+        />
+      )}
     </div>
   )
 }

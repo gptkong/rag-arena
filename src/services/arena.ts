@@ -7,7 +7,7 @@
  * - prod 模式：调用正式环境接口
  */
 
-import type { ArenaResponse, VoteRequest, VoteResponse, StatsResponse, Citation, CitationDetail, TaskListResponse, CreateConversationRequest, CreateConversationResponse, TaskAddRequest, TaskAddResponse, ChatMessage } from '@/types/arena'
+import type { ArenaResponse, VoteRequest, VoteResponse, StatsResponse, Citation, CitationDetail, TaskListResponse, CreateConversationRequest, CreateConversationResponse, TaskAddRequest, TaskAddResponse, ChatMessage, SubmitRatingRequest, SubmitRatingResponse } from '@/types/arena'
 import type { DateRange } from '@/components/arena'
 import {
   MOCK_DELAY,
@@ -334,6 +334,56 @@ export async function submitVote(request: VoteRequest): Promise<VoteResponse> {
     return response
   } catch (error) {
     console.error('[ArenaApi] submitVote failed:', error)
+    throw error
+  }
+}
+
+/**
+ * 提交评分
+ * 
+ * @param request 评分请求
+ * @returns 评分响应
+ * 
+ * @example
+ * ```ts
+ * const response = await submitRating({
+ *   questionId: 'q_123',
+ *   answerId: 'q_123_a',
+ *   rating: {
+ *     timeCost: 5,
+ *     thinkingContent: 4,
+ *     answerAccuracy: 5,
+ *     thinkingSensitivity: 4,
+ *     citationSummary: 5,
+ *     tagAccuracy: 4,
+ *     intelligentProcessing: 5,
+ *     remark: '回答很好'
+ *   }
+ * })
+ * console.log(response.success) // true
+ * ```
+ * 
+ * @remarks
+ * 真实接口对接时，需要调用:
+ * POST /api/arena/rating
+ * Body: SubmitRatingRequest
+ */
+export async function submitRating(request: SubmitRatingRequest): Promise<SubmitRatingResponse> {
+  // 如果使用 mock 模式，返回 mock 数据
+  if (shouldUseMock()) {
+    await delay(MOCK_DELAY.vote)
+    console.log('[Mock] Rating submitted:', request)
+    return {
+      success: true,
+    }
+  }
+  
+  // 真实接口调用
+  try {
+    const response = await post<SubmitRatingResponse>('/api/arena/rating', request)
+    return response
+  } catch (error) {
+    console.error('[ArenaApi] submitRating failed:', error)
     throw error
   }
 }
@@ -908,6 +958,8 @@ export const arenaApi = {
   submitQuestionStream,
   /** 提交投票 */
   submitVote,
+  /** 提交评分 */
+  submitRating,
   /** 获取统计数据 */
   getStats,
   /** 获取引用详情 */
