@@ -27,3 +27,6 @@ dist-ssr
 .env
 
 .zcf/
+.shared/
+.cursor/
+.claude/
