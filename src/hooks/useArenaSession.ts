@@ -5,6 +5,7 @@
  */
 
 import { useArenaStore, type ArenaSession } from '@/stores/arena'
+import { selectActiveSession } from '@/stores/arenaSelectors'
 
 /**
  * 当前会话状态 Hook 返回值
@@ -55,9 +56,7 @@ export interface UseArenaSessionReturn {
 export function useArenaSession(): UseArenaSessionReturn {
   const isLoading = useArenaStore((s) => s.isLoading)
   const activeSessionId = useArenaStore((s) => s.activeSessionId)
-  const activeSession = useArenaStore(
-    (s) => s.sessions.find((ss) => ss.id === s.activeSessionId) || null
-  )
+  const activeSession = useArenaStore((s) => selectActiveSession(s))
 
   const question = activeSession?.question || ''
   const questionId = activeSession?.serverQuestionId || null

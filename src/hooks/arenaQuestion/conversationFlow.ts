@@ -1,7 +1,7 @@
 import { message } from 'antd'
 import type { DateRange } from '@/types/common'
 import { arenaApi, maskCodeToProviderId, orderedMaskCodes } from '@/services/arena'
-import { useArenaStore } from '@/stores/arena'
+import type { ArenaSession } from '@/stores/arena'
 import type { Answer } from '@/types/arena'
 
 type AddDelta = (answerId: string, delta: string) => void
@@ -27,6 +27,7 @@ export async function runConversationMultiModelStream(params: {
   userId: string
   activeTaskId: string
   activeSessionId: string
+  getSessionById: (sessionId: string) => ArenaSession | undefined
   setSessionConversationInfo: (p: {
     localSessionId: string
     serverSessionId: string
@@ -45,6 +46,7 @@ export async function runConversationMultiModelStream(params: {
     userId,
     activeTaskId,
     activeSessionId,
+    getSessionById,
     setSessionConversationInfo,
     setServerQuestionId,
     setAnswers,
@@ -54,16 +56,16 @@ export async function runConversationMultiModelStream(params: {
     setAnswerError,
   } = params
 
-  // Ensure we have the latest active session id.
-  let sessionId = useArenaStore.getState().activeSessionId || activeSessionId
-  if (!sessionId) {
-    // startSessionWithQuestion already created a session, but keep this fallback.
-    sessionId = useArenaStore.getState().activeSessionId
-  }
+  // startSessionWithQuestion should have created a local session already.
+  let sessionId = activeSessionId
+  if (!sessionId) throw new Error('未找到会话 ID，请重试')
 
-  let currentSession = useArenaStore.getState().sessions.find((s) => s.id === sessionId)
+  const currentSession = getSessionById(sessionId)
 
-  if (!currentSession?.priIdMapping) {
+  // Prefer the existing mapping; otherwise, create a server conversation to obtain it.
+  let priIdMapping = currentSession?.priIdMapping
+
+  if (!priIdMapping) {
     const response = await arenaApi.createConversation(userId, {
       taskId: activeTaskId,
       messages: [],
@@ -74,7 +76,7 @@ export async function runConversationMultiModelStream(params: {
     }
 
     const serverSessionId = response.data.sessionId
-    const priIdMapping = response.data.priIdMapping
+    priIdMapping = response.data.priIdMapping
     const finalSessionId = serverSessionId || sessionId
 
     setSessionConversationInfo({
@@ -84,10 +86,8 @@ export async function runConversationMultiModelStream(params: {
     })
 
     sessionId = finalSessionId
-    currentSession = useArenaStore.getState().sessions.find((s) => s.id === sessionId)
   }
 
-  const priIdMapping = currentSession?.priIdMapping
   if (!priIdMapping) {
     throw new Error('未找到模型映射信息，请重新创建会话')
   }

@@ -9,6 +9,7 @@ import { createElement, useEffect, useMemo, useRef, useState } from 'react'
 import { Form, Modal, message } from 'antd'
 import { DeleteOutlined } from '@ant-design/icons'
 import { useArenaStore } from '@/stores/arena'
+import { selectTasksSorted, selectTaskSessionsSorted } from '@/stores/arenaSelectors'
 import { arenaApi } from '@/services/arena'
 import { useArenaTaskListSync } from '@/hooks'
 
@@ -76,13 +77,11 @@ export function useTaskSidebarController({
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // 按更新时间排序任务（使用 useMemo 缓存）
-  const sortedTasks = useMemo(() => [...tasks].sort((a, b) => b.updatedAt - a.updatedAt), [tasks])
+  const sortedTasks = useMemo(() => selectTasksSorted({ tasks }), [tasks])
 
   // 获取任务下的会话（按更新时间排序）
   const getTaskSessions = (taskId: string) =>
-    sessions
-      .filter((s) => s.taskId === taskId)
-      .sort((a, b) => b.updatedAt - a.updatedAt)
+    selectTaskSessionsSorted({ sessions }, taskId)
 
   const handleCreateTask = () => {
     if (disabled) return

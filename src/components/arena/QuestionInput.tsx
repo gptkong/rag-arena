@@ -1,20 +1,17 @@
 // QuestionInput - 问题输入组件 (使用 @ant-design/x Sender)
 
-import { useState, useRef } from 'react'
+import { useRef, useState } from 'react'
 import { Sender } from '@ant-design/x'
 import type { SenderRef } from '@ant-design/x/es/sender'
-import { Button, DatePicker, Tooltip } from 'antd'
+import { Tooltip } from 'antd'
 import {
-  PlusOutlined,
-  CalendarOutlined,
   SendOutlined,
-  CloseCircleOutlined,
 } from '@ant-design/icons'
-import type { Dayjs } from 'dayjs'
 import dayjs from 'dayjs'
 import type { DateRange } from '@/types/common'
 
-const { RangePicker } = DatePicker
+import { QuestionInputDateRangeHeader } from './QuestionInputDateRangeHeader'
+import { QuestionInputDisabledState } from './QuestionInputDisabledState'
 
 interface QuestionInputProps {
   /** 是否加载中 */
@@ -30,14 +27,6 @@ interface QuestionInputProps {
   /** 重新提问回调 */
   onReset?: () => void
 }
-
-const getPresets = () => [
-  { label: '今天', value: [dayjs().startOf('day'), dayjs().endOf('day')] as [Dayjs, Dayjs] },
-  { label: '最近7天', value: [dayjs().subtract(7, 'day'), dayjs()] as [Dayjs, Dayjs] },
-  { label: '最近30天', value: [dayjs().subtract(30, 'day'), dayjs()] as [Dayjs, Dayjs] },
-  { label: '最近3个月', value: [dayjs().subtract(3, 'month'), dayjs()] as [Dayjs, Dayjs] },
-  { label: '最近1年', value: [dayjs().subtract(1, 'year'), dayjs()] as [Dayjs, Dayjs] },
-]
 
 export function QuestionInput({
   loading = false,
@@ -76,65 +65,16 @@ export function QuestionInput({
 
   // 已有回答时，显示重新提问按钮
   if (disabled) {
-    return (
-      <div className="w-full">
-        <div className="flex items-center justify-center gap-4 px-8 py-6 border rounded-md bg-gradient-to-r from-slate-50 via-teal-50/30 to-emerald-50/30 border-slate-200">
-          <div className="flex-1 text-left">
-            <div className="mb-1 text-sm font-medium text-slate-600">想要探索新问题？</div>
-            <div className="text-xs text-slate-500">开始一个新的对话，获取更多 AI 模型的回答</div>
-          </div>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleReset}
-            size="large"
-            disabled={loading}
-            className="!rounded !h-11 !px-6 !text-sm !font-medium bg-gradient-to-r from-teal-500 via-emerald-500 to-cyan-500 !border-0 !shadow-lg !shadow-teal-500/25 hover:!shadow-xl hover:!shadow-teal-500/35 hover:scale-105 transition-all duration-300"
-          >
-            新会话
-          </Button>
-        </div>
-      </div>
-    )
+    return <QuestionInputDisabledState loading={loading} onReset={handleReset} />
   }
 
-  // 头部内容：时间选择器 + Prompt 展开区
   const headerNode = (
-    <div className="border-b border-slate-200">
-
-      {/* 时间范围选择器 */}
-      <div className="flex items-center gap-3 px-4 py-2.5 bg-gradient-to-r from-teal-50/50 via-emerald-50/30 to-cyan-50/50">
-        <div className="flex items-center flex-shrink-0 gap-2">
-          <div className="flex items-center justify-center w-6 h-6 rounded bg-gradient-to-br from-teal-500 to-emerald-500">
-            <CalendarOutlined className="text-xs text-white" />
-          </div>
-          <span className="text-sm font-medium text-slate-600">时间范围</span>
-        </div>
-        <div className="flex items-center flex-1 min-w-0 gap-2">
-          <RangePicker
-            value={dateRange}
-            onChange={handleDateChange}
-            presets={getPresets()}
-            placeholder={['开始日期', '结束日期']}
-            allowClear
-            size="small"
-            disabled={loading}
-            className="!min-w-0 !rounded-md !h-8 !border-slate-200 hover:!border-teal-400 focus-within:!border-teal-500 focus-within:!shadow-sm focus-within:!shadow-teal-500/20 transition-all duration-200 [&_.ant-picker-input]:!h-8 [&_.ant-picker-input>input]:!text-xs [&_.ant-picker-separator]:!text-slate-400"
-          />
-          {dateRange && (
-            <Tooltip title="清除时间范围">
-              <Button
-                type="text"
-                size="small"
-                icon={<CloseCircleOutlined />}
-                onClick={() => setDateRange(null)}
-                className="!h-8 !w-8 !p-0 !flex !items-center !justify-center !text-slate-500 hover:!text-red-600 hover:!bg-red-50 !rounded-md transition-all duration-200 cursor-pointer flex-shrink-0"
-              />
-            </Tooltip>
-          )}
-        </div>
-      </div>
-    </div>
+    <QuestionInputDateRangeHeader
+      dateRange={dateRange}
+      loading={loading}
+      onDateChange={handleDateChange}
+      onClearDateRange={() => setDateRange(null)}
+    />
   )
 
   return (
@@ -152,13 +92,12 @@ export function QuestionInput({
             onChange={setMergedValue}
             onSubmit={handleSubmit}
             onCancel={() => setMergedValue('')}
-             loading={loading}
+            loading={loading}
             placeholder="输入您想问的问题，让多个 AI 模型为您解答..."
             autoSize={{ minRows: 3, maxRows: 8 }}
             header={headerNode}
             className="!border-0 !rounded-none !bg-transparent [&_.ant-sender-content]:!bg-transparent [&_.ant-sender-header]:!border-0"
-            // @ts-expect-error actions prop exists at runtime but missing from types
-            actions={(_: unknown, { SendButton, LoadingButton }: { SendButton: React.ComponentType<{ icon?: React.ReactNode; className?: string }>; LoadingButton: React.ComponentType<{ className?: string }> }) => {
+            suffix={(_, { components: { SendButton, LoadingButton } }) => {
               if (loading) {
                 return (
                   <div className="flex items-center gap-2">

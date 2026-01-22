@@ -54,7 +54,6 @@ export function useArenaQuestion(): UseArenaQuestionReturn {
   const {
     isLoading,
     activeTaskId,
-    activeSessionId,
     setAnswers,
     appendAnswerDelta,
     finalizeAnswer,
@@ -78,7 +77,7 @@ export function useArenaQuestion(): UseArenaQuestionReturn {
       const trimmed = question.trim()
       if (!trimmed) return
 
-      await startSessionWithQuestion(trimmed)
+      const sessionId = await startSessionWithQuestion(trimmed)
       setLoading(true)
       clear()
 
@@ -107,7 +106,8 @@ export function useArenaQuestion(): UseArenaQuestionReturn {
           dateRange,
           userId: getUserId(),
           activeTaskId,
-          activeSessionId,
+          activeSessionId: sessionId,
+          getSessionById: (id) => useArenaStore.getState().sessions.find((s) => s.id === id),
           setSessionConversationInfo,
           setServerQuestionId,
           setAnswers,
@@ -130,7 +130,6 @@ export function useArenaQuestion(): UseArenaQuestionReturn {
     },
     [
       activeTaskId,
-      activeSessionId,
       addDelta,
       startSessionWithQuestion,
       setLoading,
