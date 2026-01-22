@@ -1,15 +1,14 @@
 import type { StateCreator } from 'zustand'
 import type { ArenaSessionSlice, ArenaState } from '../arenaStoreTypes'
 import { MAX_SESSIONS_PER_TASK, createEmptySession } from '../arenaHelpers'
+import {
+  getTaskSessions,
+  getTaskSessionsSortedByUpdatedAtAsc,
+  getTaskSessionsSortedByUpdatedAtDesc,
+  touchTask,
+} from './internalHelpers'
 
 export const createSessionSlice: StateCreator<ArenaState, [], [], ArenaSessionSlice> = (set, get) => {
-  // 辅助函数：更新任务的 updatedAt
-  const touchTask = (taskId: string) => {
-    set((state) => ({
-      tasks: state.tasks.map((t) => (t.id === taskId ? { ...t, updatedAt: Date.now() } : t)),
-    }))
-  }
-
   return {
     // ========== Session Actions ==========
 
@@ -20,12 +19,12 @@ export const createSessionSlice: StateCreator<ArenaState, [], [], ArenaSessionSl
       const newSession = createEmptySession(activeTaskId)
 
       // 限制每个任务的会话数量
-      const taskSessions = sessions.filter((s) => s.taskId === activeTaskId)
+      const taskSessions = getTaskSessions(sessions, activeTaskId)
       let nextSessions = [newSession, ...sessions]
 
       if (taskSessions.length >= MAX_SESSIONS_PER_TASK) {
         // 删除该任务下最旧的会话
-        const oldestSession = taskSessions.sort((a, b) => a.updatedAt - b.updatedAt)[0]
+        const oldestSession = getTaskSessionsSortedByUpdatedAtAsc(sessions, activeTaskId)[0]
         nextSessions = nextSessions.filter((s) => s.id !== oldestSession.id)
       }
 
@@ -34,7 +33,7 @@ export const createSessionSlice: StateCreator<ArenaState, [], [], ArenaSessionSl
         activeSessionId: newSession.id,
       })
 
-      touchTask(activeTaskId)
+      touchTask(set, activeTaskId)
       return newSession.id
     },
 
@@ -57,7 +56,7 @@ export const createSessionSlice: StateCreator<ArenaState, [], [], ArenaSessionSl
         if (!session) return state
 
         const remaining = state.sessions.filter((s) => s.id !== sessionId)
-        const taskSessions = remaining.filter((s) => s.taskId === session.taskId)
+        const taskSessions = getTaskSessions(remaining, session.taskId)
 
         // 如果任务下没有会话了，创建一个新的
         if (taskSessions.length === 0) {
@@ -73,7 +72,7 @@ export const createSessionSlice: StateCreator<ArenaState, [], [], ArenaSessionSl
         // 如果删除的是当前会话，切换到同任务下的第一个会话
         const nextActiveSessionId =
           state.activeSessionId === sessionId
-            ? taskSessions.sort((a, b) => b.updatedAt - a.updatedAt)[0].id
+            ? getTaskSessionsSortedByUpdatedAtDesc(remaining, session.taskId)[0].id
             : state.activeSessionId
 
         return {

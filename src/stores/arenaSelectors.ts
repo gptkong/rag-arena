@@ -5,6 +5,7 @@
 
 import type { Task } from '@/types/arena'
 import type { ArenaSession } from './arenaTypes'
+import { byUpdatedAtDesc } from './arenaSort'
 
 export function selectActiveSession(state: {
   sessions: ArenaSession[]
@@ -16,9 +17,9 @@ export function selectActiveSession(state: {
 export function selectTaskSessionsSorted(state: { sessions: ArenaSession[] }, taskId: string) {
   return state.sessions
     .filter((s) => s.taskId === taskId)
-    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .sort(byUpdatedAtDesc)
 }
 
 export function selectTasksSorted(state: { tasks: Task[] }): Task[] {
-  return [...state.tasks].sort((a, b) => b.updatedAt - a.updatedAt)
+  return [...state.tasks].sort(byUpdatedAtDesc)
 }

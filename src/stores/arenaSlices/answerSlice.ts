@@ -1,24 +1,10 @@
 import type { StateCreator } from 'zustand'
 import type { Answer } from '@/types/arena'
 import type { ArenaAnswerSlice, ArenaState } from '../arenaStoreTypes'
-import type { ArenaSession } from '../arenaTypes'
 import { createEmptySession, toSessionTitle } from '../arenaHelpers'
+import { touchTask, updateActiveSession } from './internalHelpers'
 
 export const createAnswerSlice: StateCreator<ArenaState, [], [], ArenaAnswerSlice> = (set, get) => {
-  // 辅助函数：更新当前会话
-  const updateActiveSession = (updater: (session: ArenaSession) => ArenaSession) => {
-    const { activeSessionId, sessions } = get()
-    const nextSessions = sessions.map((s) => (s.id === activeSessionId ? updater(s) : s))
-    set({ sessions: nextSessions })
-  }
-
-  // 辅助函数：更新任务的 updatedAt
-  const touchTask = (taskId: string) => {
-    set((state) => ({
-      tasks: state.tasks.map((t) => (t.id === taskId ? { ...t, updatedAt: Date.now() } : t)),
-    }))
-  }
-
   return {
     // ========== Question/Answer Actions ==========
 
@@ -43,12 +29,12 @@ export const createAnswerSlice: StateCreator<ArenaState, [], [], ArenaAnswerSlic
           sessions: [newSession, ...state.sessions],
           activeSessionId: newSession.id,
         }))
-        touchTask(activeTaskId)
+        touchTask(set, activeTaskId)
         return newSession.id
       }
 
       // 更新当前会话（保留priIdMapping）
-      updateActiveSession((s) => ({
+      updateActiveSession(set, get, (s) => ({
         ...s,
         question: safeQuestion,
         title: toSessionTitle(safeQuestion),
@@ -59,20 +45,24 @@ export const createAnswerSlice: StateCreator<ArenaState, [], [], ArenaAnswerSlic
         // 保留priIdMapping
         priIdMapping: s.priIdMapping,
       }))
-      touchTask(activeTaskId)
+      touchTask(set, activeTaskId)
       return activeSessionId
     },
 
     setServerQuestionId: (questionId) => {
-      updateActiveSession((s) => ({ ...s, serverQuestionId: questionId, updatedAt: Date.now() }))
+      updateActiveSession(set, get, (s) => ({
+        ...s,
+        serverQuestionId: questionId,
+        updatedAt: Date.now(),
+      }))
     },
 
     setAnswers: (answers) => {
-      updateActiveSession((s) => ({ ...s, answers, updatedAt: Date.now() }))
+      updateActiveSession(set, get, (s) => ({ ...s, answers, updatedAt: Date.now() }))
     },
 
     appendAnswerDelta: (answerId, delta) => {
-      updateActiveSession((s) => ({
+      updateActiveSession(set, get, (s) => ({
         ...s,
         updatedAt: Date.now(),
         answers: s.answers.map((answer) =>
@@ -82,7 +72,7 @@ export const createAnswerSlice: StateCreator<ArenaState, [], [], ArenaAnswerSlic
     },
 
     finalizeAnswer: (answerId, patch: Partial<Answer>) => {
-      updateActiveSession((s) => ({
+      updateActiveSession(set, get, (s) => ({
         ...s,
         updatedAt: Date.now(),
         answers: s.answers.map((answer) =>
@@ -92,7 +82,7 @@ export const createAnswerSlice: StateCreator<ArenaState, [], [], ArenaAnswerSlic
     },
 
     setAnswerError: (answerId, message) => {
-      updateActiveSession((s) => ({
+      updateActiveSession(set, get, (s) => ({
         ...s,
         updatedAt: Date.now(),
         answers: s.answers.map((answer) => (answer.id === answerId ? { ...answer, error: message } : answer)),
@@ -102,7 +92,7 @@ export const createAnswerSlice: StateCreator<ArenaState, [], [], ArenaAnswerSlic
     setLoading: (isLoading) => set({ isLoading }),
 
     setVotedAnswerId: (answerId) => {
-      updateActiveSession((s) => ({ ...s, votedAnswerId: answerId, updatedAt: Date.now() }))
+      updateActiveSession(set, get, (s) => ({ ...s, votedAnswerId: answerId, updatedAt: Date.now() }))
     },
 
     setVoting: (isVoting) => set({ isVoting }),

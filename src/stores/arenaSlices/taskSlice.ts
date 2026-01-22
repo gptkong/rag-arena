@@ -1,6 +1,7 @@
 import type { StateCreator } from 'zustand'
 import type { ArenaTaskSlice, ArenaState } from '../arenaStoreTypes'
 import { MAX_TASKS, createEmptyTask } from '../arenaHelpers'
+import { getTaskSessionsSortedByUpdatedAtDesc } from './internalHelpers'
 
 export const createTaskSlice: StateCreator<ArenaState, [], [], ArenaTaskSlice> = (set, get) => ({
   // ========== Task Actions ==========
@@ -76,9 +77,7 @@ export const createTaskSlice: StateCreator<ArenaState, [], [], ArenaTaskSlice> =
     if (!exists) return
 
     // 切换到该任务的第一个会话
-    const taskSessions = sessions
-      .filter((s) => s.taskId === taskId)
-      .sort((a, b) => b.updatedAt - a.updatedAt)
+    const taskSessions = getTaskSessionsSortedByUpdatedAtDesc(sessions, taskId)
 
     set({
       activeTaskId: taskId,
