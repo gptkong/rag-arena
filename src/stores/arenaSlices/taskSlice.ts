@@ -1,7 +1,10 @@
 import type { StateCreator } from 'zustand'
 import type { ArenaTaskSlice, ArenaState } from '../arenaStoreTypes'
 import { MAX_TASKS, createEmptyTask } from '../arenaHelpers'
-import { getTaskSessionsSortedByUpdatedAtDesc } from './internalHelpers'
+import {
+  computeActiveAfterTaskDeletion,
+  getLatestTaskSession,
+} from './internalHelpers'
 
 export const createTaskSlice: StateCreator<ArenaState, [], [], ArenaTaskSlice> = (set, get) => ({
   // ========== Task Actions ==========
@@ -40,21 +43,18 @@ export const createTaskSlice: StateCreator<ArenaState, [], [], ArenaTaskSlice> =
         }
       }
 
-      // 如果删除的是当前任务，切换到第一个任务
-      let nextActiveTaskId = state.activeTaskId
-      let nextActiveSessionId = ''
-
-      if (state.activeTaskId === taskId) {
-        nextActiveTaskId = remainingTasks[0].id
-        const taskSessions = remainingSessions.filter((s) => s.taskId === nextActiveTaskId)
-        nextActiveSessionId = taskSessions[0]?.id || ''
-      }
+      const { activeTaskId, activeSessionId } = computeActiveAfterTaskDeletion({
+        deletedTaskId: taskId,
+        prevActiveTaskId: state.activeTaskId,
+        remainingTasks,
+        remainingSessions,
+      })
 
       return {
         tasks: remainingTasks,
         sessions: remainingSessions,
-        activeTaskId: nextActiveTaskId,
-        activeSessionId: nextActiveSessionId,
+        activeTaskId,
+        activeSessionId,
       }
     })
   },
@@ -77,11 +77,11 @@ export const createTaskSlice: StateCreator<ArenaState, [], [], ArenaTaskSlice> =
     if (!exists) return
 
     // 切换到该任务的第一个会话
-    const taskSessions = getTaskSessionsSortedByUpdatedAtDesc(sessions, taskId)
+    const latest = getLatestTaskSession(sessions, taskId)
 
     set({
       activeTaskId: taskId,
-      activeSessionId: taskSessions[0]?.id || '',
+      activeSessionId: latest?.id || '',
     })
   },
 })

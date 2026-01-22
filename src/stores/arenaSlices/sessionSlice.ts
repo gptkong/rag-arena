@@ -2,9 +2,9 @@ import type { StateCreator } from 'zustand'
 import type { ArenaSessionSlice, ArenaState } from '../arenaStoreTypes'
 import { MAX_SESSIONS_PER_TASK, createEmptySession } from '../arenaHelpers'
 import {
+  computeActiveSessionAfterSessionDeletion,
   getTaskSessions,
-  getTaskSessionsSortedByUpdatedAtAsc,
-  getTaskSessionsSortedByUpdatedAtDesc,
+  getOldestTaskSession,
   touchTask,
 } from './internalHelpers'
 
@@ -24,8 +24,10 @@ export const createSessionSlice: StateCreator<ArenaState, [], [], ArenaSessionSl
 
       if (taskSessions.length >= MAX_SESSIONS_PER_TASK) {
         // 删除该任务下最旧的会话
-        const oldestSession = getTaskSessionsSortedByUpdatedAtAsc(sessions, activeTaskId)[0]
-        nextSessions = nextSessions.filter((s) => s.id !== oldestSession.id)
+        const oldestSession = getOldestTaskSession(sessions, activeTaskId)
+        if (oldestSession) {
+          nextSessions = nextSessions.filter((s) => s.id !== oldestSession.id)
+        }
       }
 
       set({
@@ -70,10 +72,12 @@ export const createSessionSlice: StateCreator<ArenaState, [], [], ArenaSessionSl
         }
 
         // 如果删除的是当前会话，切换到同任务下的第一个会话
-        const nextActiveSessionId =
-          state.activeSessionId === sessionId
-            ? getTaskSessionsSortedByUpdatedAtDesc(remaining, session.taskId)[0].id
-            : state.activeSessionId
+        const nextActiveSessionId = computeActiveSessionAfterSessionDeletion({
+          deletedSessionId: sessionId,
+          prevActiveSessionId: state.activeSessionId,
+          taskId: session.taskId,
+          remainingSessions: remaining,
+        })
 
         return {
           ...state,
